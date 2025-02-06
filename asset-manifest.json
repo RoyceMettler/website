@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/RoyceMettler/website.git/static/css/main.f855e6bc.css",
+    "main.js": "/RoyceMettler/website.git/static/js/main.443eb57f.js",
+    "static/js/488.0c0ed79f.chunk.js": "/RoyceMettler/website.git/static/js/488.0c0ed79f.chunk.js",
+    "static/media/logo.svg": "/RoyceMettler/website.git/static/media/logo.6ce24c58023cc2f8fd88fe9d219db6c6.svg",
+    "index.html": "/RoyceMettler/website.git/index.html",
+    "main.f855e6bc.css.map": "/RoyceMettler/website.git/static/css/main.f855e6bc.css.map",
+    "main.443eb57f.js.map": "/RoyceMettler/website.git/static/js/main.443eb57f.js.map",
+    "488.0c0ed79f.chunk.js.map": "/RoyceMettler/website.git/static/js/488.0c0ed79f.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f855e6bc.css",
+    "static/js/main.443eb57f.js"
+  ]
+}
