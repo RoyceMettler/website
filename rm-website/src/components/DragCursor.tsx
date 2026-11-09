@@ -1,30 +1,38 @@
 // src/components/DragCursor.tsx
 //
 // A round "Drag or click" badge that follows the mouse while it hovers one of
-// the carousel's cards, i.e. exactly while that card shows its own hover
-// scale-up. It sits to the cursor's left along the carousel's tilt (text kept
-// level). Rendered into <body> so the carousel's scaled/translated wrappers
-// can't offset it, and hidden on touch-only devices.
+// the carousel's cards, once that card has done its hover scale-up. It sits to
+// the cursor's left along the carousel's tilt (text kept level). Rendered into
+// <body> so the carousel's scaled/translated wrappers can't offset it, and
+// only for a mouse (never on touch screens).
 
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AnimatePresence,
   motion,
+  useIsPresent,
   useMotionValue,
   useReducedMotion,
   useSpring,
 } from "framer-motion";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
 const SIZE = 92;
 /** Distance from the cursor to the badge's centre. */
 const GAP = 78;
-/** Let the hovered card start its scale-up before the badge appears. */
-const SHOW_DELAY_MS = 120;
+/** Card.tsx scales a hovered card to 1.05; appear once it is 90% of the way. */
+const EXPANDED_SCALE = 1 + 0.05 * 0.9;
 /** Bridge the small gaps between neighbouring cards without a flicker. */
-const HIDE_DELAY_MS = 160;
+const HIDE_DELAY_MS = 140;
 /** Same as Card's CLICK_TOLERANCE: more movement than this is a drag. */
 const CLICK_TOLERANCE = 5;
+
+/** The card's live CSS `scale` (Tailwind's scale-105 animates that property). */
+const cardScale = (card: Element) => {
+  const value = parseFloat(getComputedStyle(card).scale);
+  return Number.isFinite(value) ? value : 1;
+};
 
 type Props = {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -36,11 +44,12 @@ type Props = {
 
 const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
   const reduced = useReducedMotion();
+  // False while Portfolio is leaving in a page transition.
+  const isPresent = useIsPresent();
   const [visible, setVisible] = useState(false);
   const [pressed, setPressed] = useState(false);
-  const [canHover] = useState(
-    () => window.matchMedia("(hover: hover) and (pointer: fine)").matches
-  );
+  // Live, not read once: hybrid devices (and DevTools emulation) can switch.
+  const canHover = useMediaQuery("(hover: hover) and (pointer: fine)");
 
   const rawX = useMotionValue(-100);
   const rawY = useMotionValue(-100);
@@ -54,96 +63,125 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
   const offsetX = -GAP * Math.cos(tilt);
   const offsetY = GAP * Math.sin(tilt);
 
-  const enabledRef = useRef(enabled);
-  const updateRef = useRef<() => void>(() => {});
+  const liveRef = useRef(false);
   useEffect(() => {
-    enabledRef.current = enabled;
-    updateRef.current();
-  }, [enabled]);
+    liveRef.current = enabled && isPresent;
+  }, [enabled, isPresent]);
 
   useEffect(() => {
     if (!canHover) return;
-    let suppressed = false; // after a click on a card, until the mouse moves
-    let pressedNow = false;
+    let x = 0;
+    let y = 0;
+    let isMouse = false; // last pointer was a mouse (not touch or pen)
+    let inside = false; // pointer is inside the window
+    let placed = false;
+    let down = false;
     let downX = 0;
     let downY = 0;
     let shown = false;
-    let wanted = false;
-    let pending: ReturnType<typeof setTimeout> | undefined;
+    let lostAt: number | null = null;
+    let clickedCard: Element | null = null;
+    let frame = 0;
 
-    // Visible exactly while a card is in its CSS :hover state, i.e. while
-    // the browser is scaling that card up, so badge and card always agree.
-    const update = () => {
-      const target = targetRef.current;
-      // Mid-drag the cursor may leave the card; keep the badge with it.
-      if (pressedNow && shown) return;
-      const next =
-        enabledRef.current && !suppressed && !!target?.querySelector("a:hover");
-      if (next === wanted) return;
-      wanted = next;
-      clearTimeout(pending);
-      pending = setTimeout(
-        () => {
-          if (shown !== wanted) setVisible((shown = wanted));
-        },
-        next ? SHOW_DELAY_MS : HIDE_DELAY_MS
-      );
+    const show = (next: boolean) => {
+      lostAt = null;
+      if (next !== shown) setVisible((shown = next));
     };
-    updateRef.current = update;
 
-    let placed = false;
-    const onMove = (e: MouseEvent) => {
-      rawX.set(e.clientX);
-      rawY.set(e.clientY);
+    // Checked every frame: the ring turns under a still cursor, and browsers
+    // don't refresh :hover until the mouse moves, so a card can stay
+    // ":hover" after it has slid away. Trust :hover only for the card that is
+    // really under the cursor.
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      const target = targetRef.current;
+      if (!target || !liveRef.current || !isMouse || !inside || document.hidden) return show(false);
+
+      const under = document.elementFromPoint(x, y);
+      if (down) {
+        // Never pop in mid-drag; keep a badge that was already up while the
+        // pointer stays on the carousel.
+        if (shown && !(under && target.contains(under))) show(false);
+        return;
+      }
+
+      const hovered = target.querySelector("a:hover");
+      const card = hovered && under && hovered.contains(under) ? hovered : null;
+      if (clickedCard && card !== clickedCard) clickedCard = null;
+      const live = card && card !== clickedCard ? card : null;
+
+      if (shown) {
+        if (live) {
+          lostAt = null;
+          return;
+        }
+        lostAt ??= performance.now();
+        if (performance.now() - lostAt >= HIDE_DELAY_MS) show(false);
+        return;
+      }
+      // Appear only once the hovered card has (nearly) finished growing.
+      if (live && cardScale(live) >= EXPANDED_SCALE) show(true);
+    };
+    frame = requestAnimationFrame(tick);
+
+    const onMove = (e: PointerEvent) => {
+      isMouse = e.pointerType === "mouse";
+      inside = true;
+      x = e.clientX;
+      y = e.clientY;
+      rawX.set(x);
+      rawY.set(y);
       if (!placed) {
         placed = true;
-        springX.jump(e.clientX);
-        springY.jump(e.clientY);
+        springX.jump(x);
+        springY.jump(y);
       }
-      suppressed = false;
-      update();
     };
-    const onDown = (e: MouseEvent) => {
-      pressedNow = true;
+    const onDown = (e: PointerEvent) => {
+      isMouse = e.pointerType === "mouse";
+      if (e.button !== 0) return;
+      down = true;
       downX = e.clientX;
       downY = e.clientY;
       setPressed(true);
     };
     const onUp = () => {
-      pressedNow = false;
+      down = false;
       setPressed(false);
-      update();
     };
-    // A click on a card navigates away; don't leave the badge behind. A drag
-    // also ends in a click event, but that one doesn't navigate.
+    // A click on a card navigates away (or opens a new tab); hide the badge
+    // and keep it off that card until the pointer leaves it. A drag also ends
+    // in a click event, and keyboard clicks have no position: ignore both.
     const onClick = (e: MouseEvent) => {
-      if (Math.hypot(e.clientX - downX, e.clientY - downY) > CLICK_TOLERANCE) return;
-      suppressed = true;
-      update();
+      if (e.detail === 0 || Math.hypot(e.clientX - downX, e.clientY - downY) > CLICK_TOLERANCE) return;
+      const card = e.target instanceof Element ? e.target.closest("a") : null;
+      if (card && targetRef.current?.contains(card)) {
+        clickedCard = card;
+        show(false);
+      }
     };
-    const onLeaveWindow = () => {
+    const onOut = (e: MouseEvent) => {
+      if (e.relatedTarget) return; // still inside the page
+      inside = false;
       placed = false;
-      suppressed = true;
-      update();
     };
-    // The ring keeps turning and the page can scroll under a still cursor,
-    // which changes the hovered card without any mouse event.
-    const recheck = setInterval(update, 150);
 
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("mouseup", onUp);
-    window.addEventListener("click", onClick);
-    document.documentElement.addEventListener("mouseleave", onLeaveWindow);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("blur", onUp);
+    window.addEventListener("click", onClick, true);
+    document.addEventListener("mouseout", onOut);
     return () => {
-      updateRef.current = () => {};
-      clearTimeout(pending);
-      clearInterval(recheck);
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("mouseup", onUp);
-      window.removeEventListener("click", onClick);
-      document.documentElement.removeEventListener("mouseleave", onLeaveWindow);
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("blur", onUp);
+      window.removeEventListener("click", onClick, true);
+      document.removeEventListener("mouseout", onOut);
     };
   }, [canHover, targetRef, rawX, rawY, springX, springY]);
 

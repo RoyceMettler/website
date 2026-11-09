@@ -60,6 +60,9 @@ const LetterMotion = ({
   );
 };
 
+// On phones the links get padding so each is a comfortable tap target.
+const linkClass = "inline-block phone:px-2.5 phone:py-1.5";
+
 const AnimatedNavItem: React.FC<NavItem> = ({
   text,
   to,
@@ -72,8 +75,9 @@ const AnimatedNavItem: React.FC<NavItem> = ({
 
   return (
     <li
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      // Mouse only: on a touch screen a tap would leave the hover colour stuck.
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
+      onPointerLeave={() => setHover(false)}
       className="cursor-pointer"
     >
       {external ? (
@@ -81,7 +85,7 @@ const AnimatedNavItem: React.FC<NavItem> = ({
           href={to}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block"
+          className={linkClass}
         >
           {letters.map((char, i) => (
             <LetterMotion
@@ -96,7 +100,7 @@ const AnimatedNavItem: React.FC<NavItem> = ({
       ) : (
         <Link
           to={to}
-          className="inline-block"
+          className={linkClass}
           // Already here: don't push a duplicate history entry.
           onClick={(e) => isCurrent && e.preventDefault()}
         >
@@ -115,11 +119,16 @@ const AnimatedNavItem: React.FC<NavItem> = ({
   );
 };
 
+// Desktop: transparent, and only the name and links take the pointer, so the
+// rest of the bar doesn't block the carousel underneath. Phones: a compact,
+// dark, blurred bar, since pages scroll underneath it.
 const Navbar: React.FC = () => (
-  <nav className="fixed top-0 left-0 right-0 bg-transparent z-50">
-    <div className="flex flex-col items-center py-4 px-6">
-      <div className="text-2xl font-bold mb-2 text-white">Royce Mettler</div>
-      <ul className="flex flex-wrap justify-center space-x-6 text-sm font-medium">
+  <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent pointer-events-none phone:pointer-events-auto phone:bg-black/60 phone:backdrop-blur-md phone:border-b phone:border-white/10">
+    <div className="flex flex-col items-center py-4 px-6 phone:pt-2 phone:pb-0.5 phone:px-2">
+      <div className="pointer-events-auto text-2xl font-bold mb-2 text-white phone:text-lg phone:leading-6 phone:mb-0">
+        Royce Mettler
+      </div>
+      <ul className="pointer-events-auto flex flex-wrap justify-center space-x-6 text-sm font-medium phone:space-x-0 phone:text-[15px]">
         {NAV_ITEMS.map((item) => (
           <AnimatedNavItem
             key={item.text}

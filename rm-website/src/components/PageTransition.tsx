@@ -7,9 +7,10 @@
 // Direction is derived from the two paths, never from history, so Back and
 // Forward behave the same as clicking a link. A direct load plays nothing.
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { motion, type Transition, type Variants } from "framer-motion";
+import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { motion, useIsPresent, type Transition, type Variants } from "framer-motion";
 import ScrollManager from "./ScrollManager";
+import { pageTop } from "../utils/dom";
 
 export type Direction = "none" | "toLower" | "toHome" | "lateral";
 export type TransitionCustom = { direction: Direction; reduced: boolean };
@@ -25,7 +26,8 @@ export function getDirection(from: string | null, to: string): Direction {
 }
 
 const EXIT: Transition = { duration: 0.35, ease: [0.55, 0, 1, 0.45] };
-const ENTER: Transition = { duration: 0.5, ease: [0.22, 1, 0.36, 1] };
+const ENTER_SECONDS = 0.5;
+const ENTER: Transition = { duration: ENTER_SECONDS, ease: [0.22, 1, 0.36, 1] };
 const FADE_OUT: Transition = { duration: 0.15, ease: "easeIn" };
 const FADE_IN: Transition = { duration: 0.25, ease: "easeOut" };
 const REDUCED: Transition = { duration: 0.2, ease: "linear" };
@@ -88,6 +90,49 @@ export const usePageTransition = () => useContext(PageTransitionContext);
 /** False while the page is still sliding in; use it to hold back fade-ins. */
 export const usePageEntered = () => useContext(PageTransitionContext).entered;
 
+/** Clip `el` to the part of it that is on screen right now. */
+const clipToViewport = (el: HTMLElement) => {
+  const top = Math.max(0, window.scrollY - pageTop(el));
+  const bottom = `max(0px, calc(100% - ${top + window.innerHeight}px))`;
+  el.style.clipPath = `inset(${top}px 0 ${bottom} 0)`;
+};
+
+/**
+ * For a sliding element that is in the normal page flow (not position:fixed):
+ * while it slides out, and while it slides in at a scrolled position, show
+ * only the one screenful that is (or will be) in view. Otherwise a long page
+ * drags the content above or below the viewport through view during the
+ * slide, which reads as a scroll rather than the page leaving or arriving.
+ */
+export function useViewportSliceClip(ref: React.RefObject<HTMLElement | null>, enabled = true) {
+  const isPresent = useIsPresent();
+  const { direction, reduced } = useContext(PageTransitionContext);
+  const leaving = useRef(false);
+
+  // Arriving from above (Portfolio coming back), possibly at a scrolled
+  // position: ScrollManager has already set the scroll (its layout effect runs
+  // first), so clip to the slice the page lands on. Pages rising from below
+  // always arrive at the top and need no clip.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!enabled || !el || direction !== "toHome" || reduced) return;
+    clipToViewport(el);
+    const timer = setTimeout(() => {
+      if (!leaving.current) el.style.clipPath = "";
+    }, (ENTER_SECONDS + 0.1) * 1000);
+    return () => clearTimeout(timer);
+    // Mount only: the slice is fixed when the page arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Leaving: freeze the slice that is on screen when the exit starts.
+  useLayoutEffect(() => {
+    if (!enabled || isPresent || !ref.current) return;
+    leaving.current = true;
+    clipToViewport(ref.current);
+  }, [enabled, isPresent, ref]);
+}
+
 type Props = {
   /** Normalized path of the page this wrapper shows. */
   path: string;
@@ -102,6 +147,10 @@ const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, child
   const [entered, setEntered] = useState(direction === "none");
   const custom: TransitionCustom = { direction, reduced };
   const isHome = path === "/";
+  const ref = useRef<HTMLDivElement>(null);
+  // Lower pages slide this wrapper. Portfolio's wrapper never moves (its
+  // layers do), so it must not be clipped either.
+  useViewportSliceClip(ref, !isHome);
 
   // Release the page's own fade-ins once the slide has (nearly) landed. A
   // timer rather than onAnimationComplete: the latter is lost when StrictMode
@@ -120,6 +169,7 @@ const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, child
   return (
     <PageTransitionContext.Provider value={{ ...custom, entered }}>
       <motion.div
+        ref={ref}
         custom={custom}
         variants={isHome ? homePageVariants : lowerPageVariants}
         initial="initial"
@@ -128,7 +178,7 @@ const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, child
       >
         {/* Mounts with the page, i.e. after the previous page's exit, so the
             scroll reset never jumps the outgoing page. Must stay before
-            `children` so its effect runs before the page's own effects. */}
+            `children` so its layout effect runs before the page's effects. */}
         <ScrollManager path={path} from={from} />
         {children}
       </motion.div>

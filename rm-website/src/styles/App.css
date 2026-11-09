@@ -2,6 +2,14 @@
 
 @import "tailwindcss";
 
+/* Phones: narrower than md, or a short touch screen (a phone held sideways).
+   Keep in sync with PHONE_MEDIA in src/hooks/useMediaQuery.ts. */
+@custom-variant phone {
+  @media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
+    @slot;
+  }
+}
+
 .reflection-mask {
   mask-image:
     linear-gradient(to top, transparent 0%, black 60%),

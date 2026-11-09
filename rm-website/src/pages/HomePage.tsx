@@ -7,8 +7,15 @@ import { motion } from 'framer-motion';
 import { homeLayerVariants, usePageTransition } from '../components/PageTransition';
 import { useInitialAnimations } from '../hooks/useInitialAnimations';
 import { useScrollProgress } from '../hooks/useScrollProgress';
+import { useIsPhone } from '../hooks/useMediaQuery';
+import PhoneHome from './PhoneHome';
 
+/** Phones get a plain list of project cards; everything else the 3D carousel. */
 function HomePage() {
+  return useIsPhone() ? <PhoneHome /> : <DesktopHome />;
+}
+
+function DesktopHome() {
   const { showHero, showCarousel } = useInitialAnimations();
   const { scrollProgress, scrollOpacity } = useScrollProgress();
   const { direction, reduced } = usePageTransition();
@@ -22,7 +29,8 @@ function HomePage() {
   // HeroSection fades out over the first 300px of scroll. Past that it's
   // invisible, so hide it for real (it would otherwise still catch hovers and
   // clicks over the top of the cards), and only then allow the drag hint.
-  const heroGone = scrollOpacity >= 300;
+  // Windows too short to scroll 300px still hide it at the bottom.
+  const heroGone = scrollOpacity >= 300 || scrollProgress >= 0.99;
 
   return (
     <>
@@ -38,7 +46,9 @@ function HomePage() {
         exit="exit"
       >
         <div
-          className={`transition-all duration-1000 ease-out z-[10] absolute ${
+          // Not transition-all: visibility must flip at once, or the faded
+          // hero keeps catching clicks for another second.
+          className={`transition-[opacity,scale] duration-1000 ease-out z-[10] absolute ${
             // show hero if initial animation triggered OR user hasn't scrolled
             // far from the top (use pixel threshold)
             (showHero || scrollOpacity < 250) ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
