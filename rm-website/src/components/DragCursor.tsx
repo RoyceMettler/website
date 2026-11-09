@@ -1,7 +1,7 @@
 // src/components/DragCursor.tsx
 //
 // A round "Drag or click" badge that follows the mouse while it is over the
-// carousel, sitting to the cursor's left along the carousel's tilt. Rendered
+// carousel, sitting to the cursor's left along the carousel's tilt (text kept level). Rendered
 // into <body> so the carousel's scaled/translated wrappers can't offset it,
 // and hidden on touch-only devices.
 
@@ -18,6 +18,8 @@ import {
 const SIZE = 80;
 /** Distance from the cursor to the badge's centre. */
 const GAP = 56;
+/** How far either side of a card (px) still counts as the strip of cards. */
+const BAND_SLACK = 40;
 
 type Props = {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -37,8 +39,10 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
 
   const rawX = useMotionValue(-100);
   const rawY = useMotionValue(-100);
-  const springX = useSpring(rawX, { stiffness: 600, damping: 40, mass: 0.5 });
-  const springY = useSpring(rawY, { stiffness: 600, damping: 40, mass: 0.5 });
+  // Soft, trailing follow: the badge glides in behind the cursor.
+  const follow = { stiffness: 110, damping: 20, mass: 1 };
+  const springX = useSpring(rawX, follow);
+  const springY = useSpring(rawY, follow);
 
   // Step back along the ring's tilt line: left and, for a clockwise tilt, up.
   const tilt = (tiltDeg * Math.PI) / 180;
@@ -57,15 +61,41 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     let lastX = -1;
     let lastY = -1;
     let suppressed = false; // after a click, until the mouse moves again
+    let pressedNow = false;
+    let shown = false;
+    const show = (next: boolean) => {
+      if (next !== shown) setVisible((shown = next));
+    };
 
-    // Show only when the carousel is what's actually under the cursor, so the
-    // badge stays away from the hero card and the navbar.
+    // Is the cursor within the strip of cards? The cards' own rects near the
+    // cursor's x give the strip's top and bottom there, so the gaps between
+    // neighbouring cards count too, but the empty space above and below
+    // doesn't.
+    const overCardBand = (target: HTMLElement) => {
+      let top = Infinity;
+      let bottom = -Infinity;
+      target.querySelectorAll("a").forEach((card) => {
+        const r = card.getBoundingClientRect();
+        // Skip hidden cards and ones swinging past the camera, whose
+        // projected rects balloon to many times the screen size.
+        if (r.width === 0 || r.width > window.innerWidth * 0.7 || r.height > window.innerHeight * 0.7) return;
+        if (lastX < r.left - BAND_SLACK || lastX > r.right + BAND_SLACK) return;
+        top = Math.min(top, r.top);
+        bottom = Math.max(bottom, r.bottom);
+      });
+      return lastY >= top && lastY <= bottom;
+    };
+
+    // Also require the carousel to be what's actually under the cursor, so
+    // the badge stays off the hero card and the navbar.
     const update = () => {
       const target = targetRef.current;
-      if (!enabledRef.current) return setVisible(false);
+      if (!enabledRef.current) return show(false);
       if (!target || lastX < 0) return;
+      // Mid-drag the cursor may wander off the strip; keep the badge with it.
+      if (pressedNow && shown) return;
       const el = document.elementFromPoint(lastX, lastY);
-      setVisible(!suppressed && !!el && target.contains(el));
+      show(!suppressed && !!el && target.contains(el) && overCardBand(target));
     };
     updateRef.current = update;
 
@@ -82,30 +112,32 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       suppressed = false;
       update();
     };
-    const onDown = () => setPressed(true);
-    const onUp = () => setPressed(false);
+    const onDown = () => {
+      pressedNow = true;
+      setPressed(true);
+    };
+    const onUp = () => {
+      pressedNow = false;
+      setPressed(false);
+      update();
+    };
     // A click on a card navigates away; don't leave the badge behind.
     const onClick = () => {
       suppressed = true;
-      setVisible(false);
+      show(false);
     };
-    const onLeaveWindow = () => setVisible(false);
-    // Re-check once scrolling settles, and again after the hero's 1s
-    // fade/visibility transition, which keeps it hit-testable meanwhile.
-    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
-    let lateTimer: ReturnType<typeof setTimeout> | undefined;
-    const onScroll = () => {
-      clearTimeout(scrollTimer);
-      clearTimeout(lateTimer);
-      scrollTimer = setTimeout(update, 80);
-      lateTimer = setTimeout(update, 1100);
+    const onLeaveWindow = () => {
+      lastX = -1;
+      show(false);
     };
+    // The ring keeps turning and the page can scroll under a still cursor
+    // (and the hero fades out over 1s), so re-check a few times a second.
+    const recheck = setInterval(update, 150);
 
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("click", onClick);
-    window.addEventListener("scroll", onScroll, { passive: true });
     document.documentElement.addEventListener("mouseleave", onLeaveWindow);
     return () => {
       updateRef.current = () => {};
@@ -113,9 +145,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("click", onClick);
-      window.removeEventListener("scroll", onScroll);
-      clearTimeout(scrollTimer);
-      clearTimeout(lateTimer);
+      clearInterval(recheck);
       document.documentElement.removeEventListener("mouseleave", onLeaveWindow);
     };
   }, [canHover, targetRef, rawX, rawY, springX, springY]);
@@ -149,8 +179,6 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
               height: SIZE,
               marginLeft: offsetX - SIZE / 2,
               marginTop: offsetY - SIZE / 2,
-              // CSS rotation is clockwise-positive, three.js the opposite.
-              rotate: -tiltDeg,
             }}
           >
             Drag
