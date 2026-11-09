@@ -16,7 +16,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { text: "Portfolio",      to: "/" },
   { text: "About",     to: "/about" },
-  { text: "Resume", to: `royce-mettler-resume.pdf`, external: true },
+  { text: "Resume", to: "/royce-mettler-resume.pdf", external: true },
   { text: "Contact",   to: "/contact" },
 ];
 
@@ -177,23 +177,46 @@ const PhoneNav: React.FC = () => {
     setOpen(false);
   }, [here]);
 
-  // While open: no page scrolling behind the menu, Escape closes it, and
-  // focus starts on the first link.
+  // While open: the page behind can't scroll and is inert (no Tab or
+  // screen-reader access), Escape / Android back close the menu, and focus
+  // starts on the first link.
   useEffect(() => {
     if (!open) return;
     const root = document.documentElement;
-    const previous = root.style.overflow;
+    const page = document.getElementById("page-content");
+    const previous = { overflow: root.style.overflow, paddingRight: root.style.paddingRight };
+    // Keep the layout from shifting when a classic scrollbar disappears.
+    const scrollbar = window.innerWidth - root.clientWidth;
     root.style.overflow = "hidden";
+    if (scrollbar > 0) root.style.paddingRight = `${scrollbar}px`;
+    page?.setAttribute("inert", "");
     firstLinkRef.current?.focus({ preventScroll: true });
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+
+    const closeAndRefocus = () => {
       setOpen(false);
       buttonRef.current?.focus();
     };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeAndRefocus();
     window.addEventListener("keydown", onKey);
+    // Android's back gesture closes the menu instead of leaving the page,
+    // where the browser supports it (Chromium's CloseWatcher).
+    type Watcher = { onclose: (() => void) | null; destroy: () => void };
+    const Ctor = (window as unknown as { CloseWatcher?: new () => Watcher }).CloseWatcher;
+    let watcher: Watcher | undefined;
+    try {
+      if (Ctor) {
+        watcher = new Ctor();
+        watcher.onclose = closeAndRefocus;
+      }
+    } catch {
+      watcher = undefined;
+    }
     return () => {
-      root.style.overflow = previous;
+      root.style.overflow = previous.overflow;
+      root.style.paddingRight = previous.paddingRight;
+      page?.removeAttribute("inert");
       window.removeEventListener("keydown", onKey);
+      watcher?.destroy();
     };
   }, [open]);
 
@@ -224,20 +247,26 @@ const PhoneNav: React.FC = () => {
           <motion.div
             id="phone-menu"
             key="phone-menu"
-            className="fixed inset-0 flex items-center justify-center overscroll-contain bg-black/85 backdrop-blur-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            // Starts below the bar and scrolls if it must (phones held
+            // sideways); m-auto centres the list only when there is room.
+            className="fixed inset-0 flex flex-col overflow-y-auto overscroll-contain bg-black/85 pt-[4.25rem] pb-6 backdrop-blur-lg"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            // A tap on the empty backdrop closes the menu.
-            onClick={(e) => e.target === e.currentTarget && close()}
+            // A tap anywhere but a link closes the menu.
+            onClick={(e) => !(e.target as Element).closest("a") && close()}
           >
-            <ul className="flex flex-col items-center gap-4">
+            <ul className="m-auto flex flex-col items-center gap-4">
               {NAV_ITEMS.map((item, i) => {
                 const current = !item.external && here === normalizePath(item.to);
                 const className =
                   "block px-6 py-2 text-3xl font-bold transition-colors [-webkit-tap-highlight-color:transparent] active:text-indigo-300 " +
-                  (current ? "text-indigo-300" : "text-white");
+                  // Current page: colour plus an underline, not colour alone.
+                  (current ? "text-indigo-300 underline decoration-2 underline-offset-8" : "text-white");
                 return (
                   <motion.li
                     key={item.text}
