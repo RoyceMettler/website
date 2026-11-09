@@ -10,6 +10,13 @@
   }
 }
 
+/* Phones: keep focused / scrolled-to elements clear of the fixed top bar. */
+@media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
+  html {
+    scroll-padding-top: 5rem;
+  }
+}
+
 .reflection-mask {
   mask-image:
     linear-gradient(to top, transparent 0%, black 60%),

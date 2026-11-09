@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-export function useInitialAnimations() {
+/** `skip`: show everything at once (e.g. a layout swapped in after arrival). */
+export function useInitialAnimations(skip = false) {
   const [pageLoaded, setPageLoaded] = useState(false);
   const [showHero, setShowHero] = useState(false);
   const [showCarousel, setShowCarousel] = useState(false);
 
   useEffect(() => {
-    const skip = sessionStorage.getItem("skipHeroAnimation") === "true";
+    const skipFlag = sessionStorage.getItem("skipHeroAnimation") === "true";
 
-    if (skip) {
+    if (skip || skipFlag) {
       sessionStorage.removeItem("skipHeroAnimation");
       setPageLoaded(true);
       // Keep the hero mounted/visible so users can scroll up to reveal it
@@ -34,6 +35,8 @@ export function useInitialAnimations() {
       clearTimeout(heroTimer);
       clearTimeout(carouselTimer);
     };
+    // Decided once, at mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { pageLoaded, showHero, showCarousel };

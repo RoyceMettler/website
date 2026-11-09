@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { pageTop } from "../utils/dom";
+import { PHONE_MEDIA } from "../hooks/useMediaQuery";
 
 // We place the scroll ourselves once the new page mounts. Left on "auto", the
 // browser restores scroll on Back/Forward and jumps the page that's leaving.
@@ -33,7 +34,12 @@ export const scrollToBottomSources = [
 const ScrollManager: React.FC<{ path: string; from: string | null }> = ({ path, from }) => {
   useLayoutEffect(() => {
     const isHome = path === "/";
-    document.documentElement.classList.toggle("hide-landing-scrollbar", isHome);
+    // The desktop landing page hides its scrollbar; the phone list is a
+    // normal scrolling page and keeps it.
+    document.documentElement.classList.toggle(
+      "hide-landing-scrollbar",
+      isHome && !window.matchMedia(PHONE_MEDIA).matches
+    );
 
     if (isHome && from !== null) {
       // Arriving by navigation: the page transition is the entrance, so skip

@@ -37,7 +37,7 @@ const LetterMotion = ({
   const delay = isHovering ? index * stagger : (total - index - 1) * stagger;
 
   return (
-    <span className="relative inline-block overflow-hidden align-bottom">
+    <span aria-hidden="true" className="relative inline-block overflow-hidden align-bottom">
       <motion.span
         initial={false}
         animate={{ y: isHovering ? "-100%" : "0%" }}
@@ -84,6 +84,8 @@ const AnimatedNavItem: React.FC<NavItem> = ({
           target="_blank"
           rel="noopener noreferrer"
           className="inline-block"
+          // The animated letters are aria-hidden; name the link once.
+          aria-label={text}
         >
           {letters.map((char, i) => (
             <LetterMotion
@@ -99,6 +101,8 @@ const AnimatedNavItem: React.FC<NavItem> = ({
         <Link
           to={to}
           className="inline-block"
+          aria-label={text}
+          aria-current={isCurrent ? "page" : undefined}
           // Already here: don't push a duplicate history entry.
           onClick={(e) => isCurrent && e.preventDefault()}
         >

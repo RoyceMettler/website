@@ -104,7 +104,12 @@ const clipToViewport = (el: HTMLElement) => {
  * drags the content above or below the viewport through view during the
  * slide, which reads as a scroll rather than the page leaving or arriving.
  */
-export function useViewportSliceClip(ref: React.RefObject<HTMLElement | null>, enabled = true) {
+export function useViewportSliceClip(
+  ref: React.RefObject<HTMLElement | null>,
+  enabled = true,
+  /** False for a layer mounted after the page arrived (layout switch). */
+  arriving = true
+) {
   const isPresent = useIsPresent();
   const { direction, reduced } = useContext(PageTransitionContext);
   const leaving = useRef(false);
@@ -115,21 +120,37 @@ export function useViewportSliceClip(ref: React.RefObject<HTMLElement | null>, e
   // always arrive at the top and need no clip.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!enabled || !el || direction !== "toHome" || reduced) return;
+    if (!enabled || !arriving || !el || direction !== "toHome" || reduced) return;
     clipToViewport(el);
-    const timer = setTimeout(() => {
+    // Lift it once the slide is done, or as soon as the visitor scrolls.
+    const unclip = () => {
       if (!leaving.current) el.style.clipPath = "";
-    }, (ENTER_SECONDS + 0.1) * 1000);
-    return () => clearTimeout(timer);
+      cleanup();
+    };
+    const timer = setTimeout(unclip, (ENTER_SECONDS + 0.1) * 1000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", unclip);
+      window.removeEventListener("touchmove", unclip);
+    };
+    window.addEventListener("scroll", unclip, { passive: true });
+    window.addEventListener("touchmove", unclip, { passive: true });
+    return cleanup;
     // Mount only: the slice is fixed when the page arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Leaving: freeze the slice that is on screen when the exit starts.
   useLayoutEffect(() => {
-    if (!enabled || isPresent || !ref.current) return;
+    const el = ref.current;
+    if (!enabled || isPresent || !el) return;
     leaving.current = true;
-    clipToViewport(ref.current);
+    clipToViewport(el);
+    // If the page comes back mid-exit (navigating straight back), unclip.
+    return () => {
+      leaving.current = false;
+      el.style.clipPath = "";
+    };
   }, [enabled, isPresent, ref]);
 }
 

@@ -22,6 +22,9 @@ export function useScrollProgress() {
     };
 
     window.addEventListener('scroll', onScroll);
+    // Read the starting position too: ScrollManager may already have scrolled
+    // (e.g. back to the carousel) before this listener existed.
+    onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 

@@ -78,6 +78,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     let down = false;
     let downX = 0;
     let downY = 0;
+    let dragged = false; // moved past CLICK_TOLERANCE during this press
     let shown = false;
     let lostAt: number | null = null;
     let clickedCard: Element | null = null;
@@ -130,6 +131,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       // A press whose release we never saw (a native image/link drag, a
       // context menu): no button is down any more, so end it.
       if (down && (e.buttons & 1) === 0) onUp();
+      if (down && Math.hypot(e.clientX - downX, e.clientY - downY) > CLICK_TOLERANCE) dragged = true;
       x = e.clientX;
       y = e.clientY;
       rawX.set(x);
@@ -144,6 +146,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       isMouse = e.pointerType === "mouse";
       if (e.button !== 0) return;
       down = true;
+      dragged = false;
       downX = e.clientX;
       downY = e.clientY;
       setPressed(true);
@@ -156,7 +159,8 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     // and keep it off that card until the pointer leaves it. A drag also ends
     // in a click event, and keyboard clicks have no position: ignore both.
     const onClick = (e: MouseEvent) => {
-      if (e.detail === 0 || Math.hypot(e.clientX - downX, e.clientY - downY) > CLICK_TOLERANCE) return;
+      // Same rule as Card.tsx: any movement past the tolerance made it a drag.
+      if (e.detail === 0 || dragged) return;
       const card = e.target instanceof Element ? e.target.closest("a") : null;
       if (card && targetRef.current?.contains(card)) {
         clickedCard = card;
@@ -179,6 +183,9 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     document.addEventListener("mouseout", onOut);
     return () => {
       cancelAnimationFrame(frame);
+      // A later run starts with shown = false; keep React state in step.
+      setVisible(false);
+      setPressed(false);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointerup", onUp);

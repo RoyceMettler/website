@@ -62,14 +62,14 @@ const PhoneCard: React.FC<{ card: CardData; animateIn: boolean }> = ({ card, ani
   );
 };
 
-const PhoneHome: React.FC = () => {
+const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
   const { direction, reduced } = usePageTransition();
   const layerRef = useRef<HTMLDivElement>(null);
-  useViewportSliceClip(layerRef);
+  useViewportSliceClip(layerRef, true, !relayout);
 
   // Arriving by a page transition, the slide is the entrance. On a direct
   // load, fade the intro and the cards in instead.
-  const [animateIn] = useState(() => direction === "none" && !reduced);
+  const [animateIn] = useState(() => direction === "none" && !reduced && !relayout);
   useEffect(() => {
     // Set by ScrollManager for the desktop hero; this layout has no use for it.
     sessionStorage.removeItem("skipHeroAnimation");
@@ -80,7 +80,7 @@ const PhoneHome: React.FC = () => {
       ref={layerRef}
       custom={{ direction, reduced }}
       variants={homeLayerVariants}
-      initial="initial"
+      initial={relayout ? false : "initial"}
       animate="enter"
       exit="exit"
       className="relative z-10 mx-auto max-w-3xl px-4 pt-24 pb-16 text-white"

@@ -3,6 +3,7 @@
 import HeroSection from '../components/HeroSection';
 import Carousel3D from '../components/Carousel3D';
 import ScrollIndicator from '../components/ScrollIndicator';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { homeLayerVariants, usePageTransition } from '../components/PageTransition';
 import { useInitialAnimations } from '../hooks/useInitialAnimations';
@@ -12,11 +13,18 @@ import PhoneHome from './PhoneHome';
 
 /** Phones get a plain list of project cards; everything else the 3D carousel. */
 function HomePage() {
-  return useIsPhone() ? <PhoneHome /> : <DesktopHome />;
+  const isPhone = useIsPhone();
+  // A layout swapped in later (rotating a tablet, resizing across the phone
+  // breakpoint) must not replay the page's arrival slide or the intro.
+  const [firstLayout] = useState(isPhone);
+  const [swapped, setSwapped] = useState(false);
+  if (!swapped && isPhone !== firstLayout) setSwapped(true);
+  const relayout = swapped || isPhone !== firstLayout;
+  return isPhone ? <PhoneHome relayout={relayout} /> : <DesktopHome relayout={relayout} />;
 }
 
-function DesktopHome() {
-  const { showHero, showCarousel } = useInitialAnimations();
+function DesktopHome({ relayout }: { relayout: boolean }) {
+  const { showHero, showCarousel } = useInitialAnimations(relayout);
   const { scrollProgress, scrollOpacity } = useScrollProgress();
   const { direction, reduced } = usePageTransition();
 
@@ -41,7 +49,7 @@ function DesktopHome() {
         className="fixed inset-0 flex items-center justify-center overflow-visible pointer-events-none"
         custom={{ direction, reduced }}
         variants={homeLayerVariants}
-        initial="initial"
+        initial={relayout ? false : "initial"}
         animate="enter"
         exit="exit"
       >
