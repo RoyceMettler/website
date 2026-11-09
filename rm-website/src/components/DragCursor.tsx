@@ -1,10 +1,11 @@
 // src/components/DragCursor.tsx
 //
-// A small round "Drag or click" badge that follows the mouse while it is over
-// the carousel. Rendered into <body> so the carousel's scaled/translated
-// wrappers can't offset it, and hidden on touch-only devices.
+// A round "Drag or click" badge that follows the mouse while it is over the
+// carousel, sitting to the cursor's left along the carousel's tilt. Rendered
+// into <body> so the carousel's scaled/translated wrappers can't offset it,
+// and hidden on touch-only devices.
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AnimatePresence,
@@ -14,11 +15,19 @@ import {
   useSpring,
 } from "framer-motion";
 
-const SIZE = 64;
+const SIZE = 80;
+/** Distance from the cursor to the badge's centre. */
+const GAP = 56;
 
-const DragCursor: React.FC<{ targetRef: React.RefObject<HTMLElement | null> }> = ({
-  targetRef,
-}) => {
+type Props = {
+  targetRef: React.RefObject<HTMLElement | null>;
+  /** The carousel's z-rotation in degrees (three.js: negative = clockwise). */
+  tiltDeg: number;
+  /** False while the hero is on screen; the badge then never shows. */
+  enabled: boolean;
+};
+
+const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
   const reduced = useReducedMotion();
   const [visible, setVisible] = useState(false);
   const [pressed, setPressed] = useState(false);
@@ -31,6 +40,18 @@ const DragCursor: React.FC<{ targetRef: React.RefObject<HTMLElement | null> }> =
   const springX = useSpring(rawX, { stiffness: 600, damping: 40, mass: 0.5 });
   const springY = useSpring(rawY, { stiffness: 600, damping: 40, mass: 0.5 });
 
+  // Step back along the ring's tilt line: left and, for a clockwise tilt, up.
+  const tilt = (tiltDeg * Math.PI) / 180;
+  const offsetX = -GAP * Math.cos(tilt);
+  const offsetY = GAP * Math.sin(tilt);
+
+  const enabledRef = useRef(enabled);
+  const updateRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    enabledRef.current = enabled;
+    updateRef.current();
+  }, [enabled]);
+
   useEffect(() => {
     if (!canHover) return;
     let lastX = -1;
@@ -41,10 +62,12 @@ const DragCursor: React.FC<{ targetRef: React.RefObject<HTMLElement | null> }> =
     // badge stays away from the hero card and the navbar.
     const update = () => {
       const target = targetRef.current;
+      if (!enabledRef.current) return setVisible(false);
       if (!target || lastX < 0) return;
       const el = document.elementFromPoint(lastX, lastY);
       setVisible(!suppressed && !!el && target.contains(el));
     };
+    updateRef.current = update;
 
     const onMove = (e: MouseEvent) => {
       const first = lastX < 0;
@@ -85,6 +108,7 @@ const DragCursor: React.FC<{ targetRef: React.RefObject<HTMLElement | null> }> =
     window.addEventListener("scroll", onScroll, { passive: true });
     document.documentElement.addEventListener("mouseleave", onLeaveWindow);
     return () => {
+      updateRef.current = () => {};
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
@@ -119,12 +143,14 @@ const DragCursor: React.FC<{ targetRef: React.RefObject<HTMLElement | null> }> =
                 ? { duration: 0.15 }
                 : { type: "spring", stiffness: 500, damping: 30 }
             }
-            className="flex items-center justify-center rounded-full bg-indigo-500 text-center text-[11px] font-semibold leading-tight text-white shadow-lg"
+            className="flex items-center justify-center rounded-full border border-white/20 bg-neutral-400/30 text-center text-[13px] font-semibold leading-tight text-white shadow-lg backdrop-blur-md"
             style={{
               width: SIZE,
               height: SIZE,
-              marginLeft: -SIZE / 2,
-              marginTop: -SIZE / 2,
+              marginLeft: offsetX - SIZE / 2,
+              marginTop: offsetY - SIZE / 2,
+              // CSS rotation is clockwise-positive, three.js the opposite.
+              rotate: -tiltDeg,
             }}
           >
             Drag

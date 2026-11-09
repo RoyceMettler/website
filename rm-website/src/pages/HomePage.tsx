@@ -19,6 +19,9 @@ function HomePage() {
   const normalizedProgress = Math.min(scrollProgress, 1);
   const carouselScale = 1 + 0.2 * Math.pow(normalizedProgress, 5);
   const carouselOpacity = 0.6 + 0.4 * Math.pow(normalizedProgress, 5);
+  // HeroSection fades out over the first 300px of scroll; until then the
+  // carousel's drag hint stays off.
+  const heroGone = scrollOpacity >= 300;
 
   return (
     <>
@@ -56,7 +59,7 @@ function HomePage() {
             transition: 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease-out',
           }}
         >
-          <Carousel3D />
+          <Carousel3D hintEnabled={heroGone} />
         </div>
 
         <ScrollIndicator scrollPosition={scrollOpacity} />

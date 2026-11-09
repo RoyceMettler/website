@@ -18,6 +18,7 @@ const BASE_VIEWPORT_WIDTH = 1920;
 const BASE_CONTAINER_HEIGHT = 900;
 const AUTO_ROTATION_SPEED = 0.003;
 const VELOCITY_DAMPING = 0.05;
+const TILT_DEG = -5;
 
 function ScaleOverride({
   width,
@@ -68,7 +69,7 @@ const CarouselScene: React.FC<{
   });
 
   return (
-    <group ref={groupRef} rotation={[0, 0, THREE.MathUtils.degToRad(-5)]}>
+    <group ref={groupRef} rotation={[0, 0, THREE.MathUtils.degToRad(TILT_DEG)]}>
       {cards.map((c, i) => (
         <Card
           key={i}
@@ -81,7 +82,7 @@ const CarouselScene: React.FC<{
   );
 };
 
-const Carousel3D: React.FC = () => {
+const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true }) => {
   const [targetOffset, setTargetOffset] = useState(0);
   const dragging = useRef(false);
   const startX = useRef(0);
@@ -169,7 +170,7 @@ const Carousel3D: React.FC = () => {
       className="w-full cursor-grab active:cursor-grabbing overflow-visible"
       style={{ height: `${BASE_CONTAINER_HEIGHT * scaleFactor}px` }}
     >
-      <DragCursor targetRef={containerRef} />
+      <DragCursor targetRef={containerRef} tiltDeg={TILT_DEG} enabled={hintEnabled} />
       <Canvas
         dpr={window.devicePixelRatio}
         camera={{ position: [0, 0, 10], fov: 32 }}
