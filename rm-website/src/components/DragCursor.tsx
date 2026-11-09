@@ -127,6 +127,9 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     const onMove = (e: PointerEvent) => {
       isMouse = e.pointerType === "mouse";
       inside = true;
+      // A press whose release we never saw (a native image/link drag, a
+      // context menu): no button is down any more, so end it.
+      if (down && (e.buttons & 1) === 0) onUp();
       x = e.clientX;
       y = e.clientY;
       rawX.set(x);
@@ -171,6 +174,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
     window.addEventListener("blur", onUp);
+    window.addEventListener("dragend", onUp);
     window.addEventListener("click", onClick, true);
     document.addEventListener("mouseout", onOut);
     return () => {
@@ -180,6 +184,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
       window.removeEventListener("blur", onUp);
+      window.removeEventListener("dragend", onUp);
       window.removeEventListener("click", onClick, true);
       document.removeEventListener("mouseout", onOut);
     };

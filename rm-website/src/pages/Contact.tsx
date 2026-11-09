@@ -47,12 +47,12 @@ const Contact: React.FC = () => {
   const entered = usePageEntered();
   return (
     <div className="relative min-h-screen">
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 phone:pt-24 phone:pb-10">
         <TiltWrapper maxTilt={1} transitionSpeed={1000} hoverScaleEffect>
           <motion.div
             initial="hidden"
             animate={entered ? "show" : "hidden"}
-            className="w-[min(90vw,theme(maxWidth.6xl))] mx-auto bg-black/70 p-10 md:p-16 rounded-3xl shadow-2xl overflow-hidden"
+            className="w-[min(90vw,theme(maxWidth.6xl))] mx-auto bg-black/70 p-10 md:p-16 phone:p-6 rounded-3xl shadow-2xl overflow-hidden"
           >
             <motion.h2
               custom={0}
