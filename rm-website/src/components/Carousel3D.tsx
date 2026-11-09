@@ -9,8 +9,8 @@ import React, {
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Card from "./Card";
+import DragCursor from "./DragCursor";
 import { cards } from "./CardList";
 
 const BASE_RADIUS = 100;
@@ -18,15 +18,6 @@ const BASE_VIEWPORT_WIDTH = 1920;
 const BASE_CONTAINER_HEIGHT = 900;
 const AUTO_ROTATION_SPEED = 0.003;
 const VELOCITY_DAMPING = 0.05;
-
-// Hover hint: the ring sways right then left (damped sine, in offset units)
-// to show it can be spun, until the visitor has dragged it once.
-const SWAY_AMPLITUDE = 1.6;
-const SWAY_PERIOD_MS = 900;
-const SWAY_DECAY_MS = 450;
-const SWAY_LENGTH_MS = 1600;
-const swayAt = (t: number) =>
-  SWAY_AMPLITUDE * Math.sin((2 * Math.PI * t) / SWAY_PERIOD_MS) * Math.exp(-t / SWAY_DECAY_MS);
 
 function ScaleOverride({
   width,
@@ -101,12 +92,6 @@ const Carousel3D: React.FC = () => {
   const velocityRef = useRef(AUTO_ROTATION_SPEED);
   const lastFrameTime = useRef(performance.now());
   const animationFrameId = useRef<number | null>(null);
-  const reducedMotion = useReducedMotion();
-  const [showHint, setShowHint] = useState(false);
-  const hasDragged = useRef(false);
-  const hintRef = useRef<HTMLDivElement>(null);
-  const swayStart = useRef<number | null>(null);
-  const swayLast = useRef(0);
 
   const scaleFactor = windowWidth / BASE_VIEWPORT_WIDTH;
 
@@ -118,17 +103,7 @@ const Carousel3D: React.FC = () => {
     if (!dragging.current) {
       const velocityDiff = AUTO_ROTATION_SPEED - velocityRef.current;
       velocityRef.current += velocityDiff * VELOCITY_DAMPING * deltaTime;
-
-      let sway = 0;
-      if (swayStart.current !== null) {
-        const t = now - swayStart.current;
-        const value = t < SWAY_LENGTH_MS ? swayAt(t) : 0;
-        sway = value - swayLast.current;
-        swayLast.current = value;
-        if (t >= SWAY_LENGTH_MS) swayStart.current = null;
-      }
-
-      setTargetOffset((prev) => prev + velocityRef.current * deltaTime + sway);
+      setTargetOffset((prev) => prev + velocityRef.current * deltaTime);
     }
 
     animationFrameId.current = requestAnimationFrame(animateCarousel);
@@ -150,17 +125,6 @@ const Carousel3D: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const moveHint = (e: MouseEvent) => {
-      const el = containerRef.current;
-      if (!hintRef.current || !el) return;
-      // The wrapper is scaled with scroll; map the cursor into its own units.
-      const box = el.getBoundingClientRect();
-      const scale = box.width / el.offsetWidth || 1;
-      const x = (e.clientX - box.left) / scale + 18;
-      const y = (e.clientY - box.top) / scale + 18;
-      hintRef.current.style.transform = `translate(${x}px, ${y}px)`;
-    };
-
     const handleMouseDown = (e: MouseEvent) => {
       if (allowDrag.current) {
         dragging.current = true;
@@ -171,33 +135,17 @@ const Carousel3D: React.FC = () => {
       dragging.current = false;
     };
     const handleMouseMove = (e: MouseEvent) => {
-      if (allowDrag.current) moveHint(e);
       if (dragging.current) {
-        if (!hasDragged.current && Math.abs(e.clientX - startX.current) > 4) {
-          hasDragged.current = true;
-          setShowHint(false);
-        }
         const delta = e.clientX - startX.current;
         velocityRef.current = -delta * scrollSpeed * 0.1;
         setTargetOffset((prev) => prev - delta * scrollSpeed);
         startX.current = e.clientX;
       }
     };
-    const handleEnter = (e: MouseEvent) => {
-      allowDrag.current = true;
-      if (hasDragged.current) return;
-      moveHint(e);
-      setShowHint(true);
-      // Sway once per hover, and not again while one is still playing.
-      if (!reducedMotion && swayStart.current === null) {
-        swayStart.current = performance.now();
-        swayLast.current = 0;
-      }
-    };
+    const handleEnter = () => (allowDrag.current = true);
     const handleLeave = () => {
       allowDrag.current = false;
       dragging.current = false;
-      setShowHint(false);
     };
 
     window.addEventListener("mousedown", handleMouseDown);
@@ -213,33 +161,15 @@ const Carousel3D: React.FC = () => {
       containerRef.current?.removeEventListener("mouseenter", handleEnter);
       containerRef.current?.removeEventListener("mouseleave", handleLeave);
     };
-  }, [reducedMotion]);
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full cursor-grab active:cursor-grabbing overflow-visible"
+      className="w-full cursor-grab active:cursor-grabbing overflow-visible"
       style={{ height: `${BASE_CONTAINER_HEIGHT * scaleFactor}px` }}
     >
-      {/* Cursor-following "drag" hint; positioned by moveHint(). The z-index
-          clears drei's <Html> cards, which use z-indexes up to 16777271. */}
-      <div ref={hintRef} className="pointer-events-none absolute left-0 top-0 z-[16777272]">
-        <AnimatePresence>
-          {showHint && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="flex items-center gap-2 whitespace-nowrap rounded-full bg-black/75 px-3 py-1.5 text-sm font-medium text-white shadow-lg"
-            >
-              <span className="text-indigo-300">&larr;</span>
-              Drag to spin
-              <span className="text-indigo-300">&rarr;</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <DragCursor targetRef={containerRef} />
       <Canvas
         dpr={window.devicePixelRatio}
         camera={{ position: [0, 0, 10], fov: 32 }}
