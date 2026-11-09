@@ -156,6 +156,10 @@ const About: React.FC = () => {
             >
               <video
                 src="/assets/montage.mp4"
+                poster="/assets/montage-poster.jpg"
+                width={1280}
+                height={1080}
+                style={{ aspectRatio: '1280 / 1080' }}
                 autoPlay
                 loop
                 muted

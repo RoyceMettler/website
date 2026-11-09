@@ -62,6 +62,8 @@ const District65: React.FC = () => {
             >
               <img
                 src="/assets/hero/teaching.jpg"
+                width={1024}
+                height={683}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>

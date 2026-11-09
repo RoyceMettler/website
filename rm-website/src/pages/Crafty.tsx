@@ -62,6 +62,8 @@ const Crafty: React.FC = () => {
             >
               <img
                 src="/assets/hero/crafty.jpg"
+                width={4096}
+                height={2730}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>

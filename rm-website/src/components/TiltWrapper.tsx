@@ -40,7 +40,6 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
   reflectionGap = 'mt-2',
 }) => {
   const tiltRef = useRef<HTMLDivElement>(null);
-  const childContainerRef = useRef<HTMLDivElement>(null);
   const [tiltStyle, setTiltStyle] = useState<CSSProperties>({
     transform: `perspective(${perspective}px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)`,
     transition: `transform ${transitionSpeed}ms ${easing}`,
@@ -48,7 +47,6 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
   const [isHovering, setIsHovering] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const fadeDuration = Math.max(300, transitionSpeed);
-  const [minSizeStyle, setMinSizeStyle] = useState<CSSProperties | undefined>(undefined);
   const applyTilt = (rotateX: number, rotateY: number) => {
     const effectiveScale = hoverScaleEffect && isHovering ? scale * 1.05 : scale;
     setTiltStyle({
@@ -135,73 +133,27 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
   });
 
   useEffect(() => {
-    if (!isMediaElement) {
-      setIsLoaded(true);
-    }
+    if (!isMediaElement) setIsLoaded(true);
+  }, [isMediaElement]);
 
-    const calculateSize = () => {
-      const el = childContainerRef.current;
-      if (!el) return;
-
-      const childEl = el.querySelector('img, video');
-      let width = 0;
-      let height = 0;
-
-      if (childEl) {
-        const childRect = childEl.getBoundingClientRect();
-        width = childRect.width;
-        height = childRect.height;
-
-        if (!width || !height) {
-          const cs = window.getComputedStyle(childEl);
-          width = parseFloat(cs.width || '0');
-          height = parseFloat(cs.height || '0');
-        }
-      }
-
-      if (!width || !height) {
-        const rect = el.getBoundingClientRect();
-        width = rect.width;
-        height = rect.height;
-      }
-
-      if (!width || !height) {
-        const cs = window.getComputedStyle(el);
-        width = parseFloat(cs.width || '0');
-        height = parseFloat(cs.height || '0');
-      }
-
-      if (width && height) {
-        setMinSizeStyle({ minWidth: `${width}px`, minHeight: `${height}px` });
-      }
-    };
-
-    calculateSize();
-    const timer = setTimeout(calculateSize, 50);
-
-    const handleRealLoad = () => {
-      setTimeout(() => setMinSizeStyle(undefined), fadeDuration + 50);
-    };
-
-    if (isLoaded) handleRealLoad();
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [childElement.type, isMediaElement, fadeDuration, isLoaded]);
+  // Media children fill the container width, so their box size comes from CSS
+  // (w-full plus an aspect ratio or width/height attributes on the media), not
+  // from JS measurement. Never measure with getBoundingClientRect here: it
+  // includes the tilt/scale transform.
+  const containerClass = isMediaElement ? 'relative block w-full' : 'relative inline-block';
 
   return (
     <div
       ref={tiltRef}
       style={tiltStyle}
-      className={`tilt-wrapper ${className} transition-transform duration-300 ease-out`}
+      className={`tilt-wrapper ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div ref={childContainerRef} className="relative inline-block" style={minSizeStyle}>
+      <div className={containerClass}>
         {!isLoaded && (
           <div
-            className="absolute inset-0 z-10 rounded-2xl overflow-hidden bg-gray-200 dark:bg-gray-700 animate-pulse"
+            className="absolute inset-0 z-10 rounded-2xl overflow-hidden bg-white/10 animate-pulse"
             aria-hidden="true"
           />
         )}
@@ -218,7 +170,7 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
           >
             {!isLoaded ? (
               <div
-                className={`w-full h-full transform scale-y-[-1] ${reflectionBlur} pointer-events-none bg-gray-200 dark:bg-gray-700 animate-pulse`}
+                className={`w-full h-full transform scale-y-[-1] ${reflectionBlur} pointer-events-none bg-white/10 animate-pulse`}
                 style={{
                   transformOrigin: 'top',
                 }}

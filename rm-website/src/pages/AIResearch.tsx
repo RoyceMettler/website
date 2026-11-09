@@ -62,6 +62,8 @@ const AIResearch: React.FC = () => {
             >
               <img
                 src="/assets/hero/mudd.jpg"
+                width={1800}
+                height={1200}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>

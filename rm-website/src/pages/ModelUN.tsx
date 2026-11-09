@@ -62,6 +62,8 @@ const ModelUN: React.FC = () => {
             >
               <img
                 src="/assets/hero/mun.jpg"
+                width={5065}
+                height={3377}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>

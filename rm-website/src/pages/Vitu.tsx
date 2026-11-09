@@ -62,6 +62,10 @@ const Vitu: React.FC = () => {
             >
               <video
                 src="/assets/VituMontage.mp4"
+                poster="/assets/VituMontage-poster.jpg"
+                width={1280}
+                height={1080}
+                style={{ aspectRatio: '1280 / 1080' }}
                 autoPlay
                 loop
                 muted
