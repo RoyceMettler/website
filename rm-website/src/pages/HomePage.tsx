@@ -19,8 +19,9 @@ function HomePage() {
   const normalizedProgress = Math.min(scrollProgress, 1);
   const carouselScale = 1 + 0.2 * Math.pow(normalizedProgress, 5);
   const carouselOpacity = 0.6 + 0.4 * Math.pow(normalizedProgress, 5);
-  // HeroSection fades out over the first 300px of scroll; until then the
-  // carousel's drag hint stays off.
+  // HeroSection fades out over the first 300px of scroll. Past that it's
+  // invisible, so hide it for real (it would otherwise still catch hovers and
+  // clicks over the top of the cards), and only then allow the drag hint.
   const heroGone = scrollOpacity >= 300;
 
   return (
@@ -43,9 +44,9 @@ function HomePage() {
             (showHero || scrollOpacity < 250) ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
           style={{
-            visibility: scrollProgress >= 0.99 ? 'hidden' : 'visible',
-            pointerEvents: scrollProgress >= 0.99 ? 'none' : 'auto',
-            userSelect: scrollProgress >= 0.99 ? 'none' : 'auto',
+            visibility: heroGone ? 'hidden' : 'visible',
+            pointerEvents: heroGone ? 'none' : 'auto',
+            userSelect: heroGone ? 'none' : 'auto',
           }}
         >
           <HeroSection scrollPosition={heroOffsetY} />

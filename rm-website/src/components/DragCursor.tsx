@@ -1,9 +1,10 @@
 // src/components/DragCursor.tsx
 //
-// A round "Drag or click" badge that follows the mouse while it is over the
-// carousel, sitting to the cursor's left along the carousel's tilt (text kept level). Rendered
-// into <body> so the carousel's scaled/translated wrappers can't offset it,
-// and hidden on touch-only devices.
+// A round "Drag or click" badge that follows the mouse while it hovers one of
+// the carousel's cards, i.e. exactly while that card shows its own hover
+// scale-up. It sits to the cursor's left along the carousel's tilt (text kept
+// level). Rendered into <body> so the carousel's scaled/translated wrappers
+// can't offset it, and hidden on touch-only devices.
 
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -15,11 +16,15 @@ import {
   useSpring,
 } from "framer-motion";
 
-const SIZE = 80;
+const SIZE = 92;
 /** Distance from the cursor to the badge's centre. */
-const GAP = 56;
-/** How far either side of a card (px) still counts as the strip of cards. */
-const BAND_SLACK = 40;
+const GAP = 78;
+/** Let the hovered card start its scale-up before the badge appears. */
+const SHOW_DELAY_MS = 120;
+/** Bridge the small gaps between neighbouring cards without a flicker. */
+const HIDE_DELAY_MS = 160;
+/** Same as Card's CLICK_TOLERANCE: more movement than this is a drag. */
+const CLICK_TOLERANCE = 5;
 
 type Props = {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -58,62 +63,50 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
 
   useEffect(() => {
     if (!canHover) return;
-    let lastX = -1;
-    let lastY = -1;
-    let suppressed = false; // after a click, until the mouse moves again
+    let suppressed = false; // after a click on a card, until the mouse moves
     let pressedNow = false;
+    let downX = 0;
+    let downY = 0;
     let shown = false;
-    const show = (next: boolean) => {
-      if (next !== shown) setVisible((shown = next));
-    };
+    let wanted = false;
+    let pending: ReturnType<typeof setTimeout> | undefined;
 
-    // Is the cursor within the strip of cards? The cards' own rects near the
-    // cursor's x give the strip's top and bottom there, so the gaps between
-    // neighbouring cards count too, but the empty space above and below
-    // doesn't.
-    const overCardBand = (target: HTMLElement) => {
-      let top = Infinity;
-      let bottom = -Infinity;
-      target.querySelectorAll("a").forEach((card) => {
-        const r = card.getBoundingClientRect();
-        // Skip hidden cards and ones swinging past the camera, whose
-        // projected rects balloon to many times the screen size.
-        if (r.width === 0 || r.width > window.innerWidth * 0.7 || r.height > window.innerHeight * 0.7) return;
-        if (lastX < r.left - BAND_SLACK || lastX > r.right + BAND_SLACK) return;
-        top = Math.min(top, r.top);
-        bottom = Math.max(bottom, r.bottom);
-      });
-      return lastY >= top && lastY <= bottom;
-    };
-
-    // Also require the carousel to be what's actually under the cursor, so
-    // the badge stays off the hero card and the navbar.
+    // Visible exactly while a card is in its CSS :hover state, i.e. while
+    // the browser is scaling that card up, so badge and card always agree.
     const update = () => {
       const target = targetRef.current;
-      if (!enabledRef.current) return show(false);
-      if (!target || lastX < 0) return;
-      // Mid-drag the cursor may wander off the strip; keep the badge with it.
+      // Mid-drag the cursor may leave the card; keep the badge with it.
       if (pressedNow && shown) return;
-      const el = document.elementFromPoint(lastX, lastY);
-      show(!suppressed && !!el && target.contains(el) && overCardBand(target));
+      const next =
+        enabledRef.current && !suppressed && !!target?.querySelector("a:hover");
+      if (next === wanted) return;
+      wanted = next;
+      clearTimeout(pending);
+      pending = setTimeout(
+        () => {
+          if (shown !== wanted) setVisible((shown = wanted));
+        },
+        next ? SHOW_DELAY_MS : HIDE_DELAY_MS
+      );
     };
     updateRef.current = update;
 
+    let placed = false;
     const onMove = (e: MouseEvent) => {
-      const first = lastX < 0;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      rawX.set(lastX);
-      rawY.set(lastY);
-      if (first) {
-        springX.jump(lastX);
-        springY.jump(lastY);
+      rawX.set(e.clientX);
+      rawY.set(e.clientY);
+      if (!placed) {
+        placed = true;
+        springX.jump(e.clientX);
+        springY.jump(e.clientY);
       }
       suppressed = false;
       update();
     };
-    const onDown = () => {
+    const onDown = (e: MouseEvent) => {
       pressedNow = true;
+      downX = e.clientX;
+      downY = e.clientY;
       setPressed(true);
     };
     const onUp = () => {
@@ -121,17 +114,20 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       setPressed(false);
       update();
     };
-    // A click on a card navigates away; don't leave the badge behind.
-    const onClick = () => {
+    // A click on a card navigates away; don't leave the badge behind. A drag
+    // also ends in a click event, but that one doesn't navigate.
+    const onClick = (e: MouseEvent) => {
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) > CLICK_TOLERANCE) return;
       suppressed = true;
-      show(false);
+      update();
     };
     const onLeaveWindow = () => {
-      lastX = -1;
-      show(false);
+      placed = false;
+      suppressed = true;
+      update();
     };
-    // The ring keeps turning and the page can scroll under a still cursor
-    // (and the hero fades out over 1s), so re-check a few times a second.
+    // The ring keeps turning and the page can scroll under a still cursor,
+    // which changes the hovered card without any mouse event.
     const recheck = setInterval(update, 150);
 
     window.addEventListener("mousemove", onMove);
@@ -141,11 +137,12 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
     document.documentElement.addEventListener("mouseleave", onLeaveWindow);
     return () => {
       updateRef.current = () => {};
+      clearTimeout(pending);
+      clearInterval(recheck);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("click", onClick);
-      clearInterval(recheck);
       document.documentElement.removeEventListener("mouseleave", onLeaveWindow);
     };
   }, [canHover, targetRef, rawX, rawY, springX, springY]);
@@ -173,7 +170,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
                 ? { duration: 0.15 }
                 : { type: "spring", stiffness: 500, damping: 30 }
             }
-            className="flex items-center justify-center rounded-full border border-white/20 bg-neutral-400/30 text-center text-[13px] font-semibold leading-tight text-white shadow-lg backdrop-blur-md"
+            className="flex items-center justify-center rounded-full border border-white/20 bg-neutral-400/30 text-center text-sm font-semibold leading-tight text-white shadow-lg backdrop-blur-md"
             style={{
               width: SIZE,
               height: SIZE,
