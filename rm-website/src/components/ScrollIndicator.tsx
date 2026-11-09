@@ -15,21 +15,7 @@ const ScrollIndicator: React.FC<ScrollIndicatorProps> = ({ scrollPosition }) => 
       style={{ opacity }}
     >
       <div className="flex flex-col items-center text-white">
-        <p className="mb-2 text-sm font-medium">Scroll Down for my Portfolio</p>
-        <svg 
-          className="w-6 h-6 scroll-hint" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M19 14l-7 7m0 0l-7-7m7 7V3" 
-          />
-        </svg>
+        <p className="text-sm font-medium">Scroll Down for my Portfolio</p>
       </div>
     </div>
   );
