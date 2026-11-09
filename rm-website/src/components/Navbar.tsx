@@ -2,7 +2,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { normalizePath } from "./PageTransition";
 
 type NavItem = {
   text: string;
@@ -65,6 +66,8 @@ const AnimatedNavItem: React.FC<NavItem> = ({
   external = false,
 }) => {
   const [hover, setHover] = React.useState(false);
+  const { pathname } = useLocation();
+  const isCurrent = !external && normalizePath(pathname) === normalizePath(to);
   const letters = text.split("");
 
   return (
@@ -91,7 +94,12 @@ const AnimatedNavItem: React.FC<NavItem> = ({
           ))}
         </a>
       ) : (
-        <Link to={to} className="inline-block">
+        <Link
+          to={to}
+          className="inline-block"
+          // Already here: don't push a duplicate history entry.
+          onClick={(e) => isCurrent && e.preventDefault()}
+        >
           {letters.map((char, i) => (
             <LetterMotion
               key={i}

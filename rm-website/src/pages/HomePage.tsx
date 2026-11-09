@@ -3,12 +3,15 @@
 import HeroSection from '../components/HeroSection';
 import Carousel3D from '../components/Carousel3D';
 import ScrollIndicator from '../components/ScrollIndicator';
+import { motion } from 'framer-motion';
+import { homeLayerVariants, usePageTransition } from '../components/PageTransition';
 import { useInitialAnimations } from '../hooks/useInitialAnimations';
 import { useScrollProgress } from '../hooks/useScrollProgress';
 
 function HomePage() {
   const { showHero, showCarousel } = useInitialAnimations();
   const { scrollProgress, scrollOpacity } = useScrollProgress();
+  const { direction, reduced } = usePageTransition();
 
   // Use pixel scroll (scrollOpacity) for hero offset/visibility so
   // small upward scrolls reliably reveal the hero in production builds.
@@ -20,7 +23,16 @@ function HomePage() {
   return (
     <>
 
-      <div className="fixed inset-0 flex items-center justify-center overflow-visible pointer-events-none">
+      {/* The page transition moves this fixed layer itself (not a wrapper)
+          so the fixed hero and carousel keep the viewport as their frame. */}
+      <motion.div
+        className="fixed inset-0 flex items-center justify-center overflow-visible pointer-events-none"
+        custom={{ direction, reduced }}
+        variants={homeLayerVariants}
+        initial="initial"
+        animate="enter"
+        exit="exit"
+      >
         <div
           className={`transition-all duration-1000 ease-out z-[10] absolute ${
             // show hero if initial animation triggered OR user hasn't scrolled
@@ -46,9 +58,10 @@ function HomePage() {
         >
           <Carousel3D />
         </div>
-      </div>
 
-      <ScrollIndicator scrollPosition={scrollOpacity} />
+        <ScrollIndicator scrollPosition={scrollOpacity} />
+      </motion.div>
+
       <div className="h-[150vh]" />
     </>
   );

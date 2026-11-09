@@ -3,6 +3,7 @@
 import React from 'react'
 import { FaGithub, FaLinkedin, FaInstagram } from 'react-icons/fa'
 import { motion } from 'framer-motion'
+import { usePageEntered } from "../components/PageTransition";
 import HireMeButton from '../components/HireMeButton'
 import TiltWrapper from '../components/TiltWrapper'
 
@@ -43,13 +44,14 @@ const textVariant = {
 }
 
 const Contact: React.FC = () => {
+  const entered = usePageEntered();
   return (
     <div className="relative min-h-screen">
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
         <TiltWrapper maxTilt={1} transitionSpeed={1000} hoverScaleEffect>
           <motion.div
             initial="hidden"
-            animate="show"
+            animate={entered ? "show" : "hidden"}
             className="w-[min(90vw,theme(maxWidth.6xl))] mx-auto bg-black/70 p-10 md:p-16 rounded-3xl shadow-2xl overflow-hidden"
           >
             <motion.h2
