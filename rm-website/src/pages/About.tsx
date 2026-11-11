@@ -143,7 +143,9 @@ const About: React.FC = () => {
         </motion.div>
 
         <div className="lg:flex-1 flex justify-center items-center">
-          <div className="w-full max-w-2xl">
+          {/* Stacked layout: the montage is last on the page, so leave room
+              below it for its reflection (about 17% of its width). */}
+          <div className="w-full max-w-2xl pb-[20%] lg:pb-0">
             <TiltWrapper 
               maxTilt={4} 
               transitionSpeed={1000} 

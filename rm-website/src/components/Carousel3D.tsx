@@ -34,10 +34,11 @@ const HINT_DONE_PX = 600;
 let dragPractice = 0;
 
 const hintIsDone = () => {
+  if (dragPractice >= 1) return true; // retired earlier in this visit
   try {
     return localStorage.getItem(HINT_DONE_KEY) === "1";
   } catch {
-    return false; // storage blocked: the hint just lasts for this visit
+    return false; // storage blocked: it is only remembered for this visit
   }
 };
 

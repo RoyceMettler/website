@@ -46,7 +46,7 @@ function App() {
   }, [location.pathname]);*/
 
   return (
-    <div className="bg-grandbend min-h-screen">
+    <div className="bg-grandbend min-h-screen phone:min-h-svh">
       <Navbar />
       {/* overflow-clip keeps a page that is sliding in from growing the
           document; it doesn't clip the home page's fixed layers. */}

@@ -2,27 +2,45 @@
 
 import { useEffect } from "react";
 
-// Where the mouse is, tracked for the whole visit (not per carousel mount), so
-// a carousel that has just mounted already knows what the mouse is resting on.
-let mouseX = 0;
-let mouseY = 0;
-let mouseTracked = false; // a mouse (not touch) is over the page
+// Where the pointer is, tracked for the whole visit (not per carousel mount),
+// so a carousel that has just mounted already knows what it is resting on.
+let pointerX = 0;
+let pointerY = 0;
+let pointerTracked = false; // a mouse or pen (not touch) is over the page
 
 if (typeof window !== "undefined") {
   const onPointer = (e: PointerEvent) => {
-    mouseTracked = e.pointerType === "mouse";
-    mouseX = e.clientX;
-    mouseY = e.clientY;
+    pointerTracked = e.pointerType !== "touch";
+    pointerX = e.clientX;
+    pointerY = e.clientY;
+  };
+  const lost = () => {
+    pointerTracked = false;
   };
   window.addEventListener("pointermove", onPointer, { passive: true });
   window.addEventListener("pointerdown", onPointer, { passive: true });
-  document.addEventListener("mouseout", (e) => {
-    if (!e.relatedTarget) mouseTracked = false; // left the window
+  // These carry the position even when the pointer itself hasn't moved (the
+  // page was scrolled under it since load): the browser's own hover refresh,
+  // and the wheel.
+  window.addEventListener("pointerover", onPointer, { passive: true });
+  window.addEventListener(
+    "wheel",
+    (e) => {
+      pointerTracked = true;
+      pointerX = e.clientX;
+      pointerY = e.clientY;
+    },
+    { passive: true }
+  );
+  // Left the window, or a pen was lifted out of range.
+  document.addEventListener("pointerout", (e) => {
+    if (!e.relatedTarget) lost();
   });
+  window.addEventListener("pointercancel", lost);
 }
 
 /**
- * Marks the carousel card that is under the mouse with data-hover="true".
+ * Marks the carousel card that is under the pointer with data-hover="true".
  * Card styles its hover look (scale-up, pointer cursor) from that attribute
  * rather than from CSS :hover.
  *
@@ -48,8 +66,8 @@ export function useCardHover(containerRef: React.RefObject<HTMLElement | null>) 
     const tick = () => {
       frame = requestAnimationFrame(tick);
       const container = containerRef.current;
-      if (!container || !mouseTracked || document.hidden) return mark(null);
-      const el = document.elementFromPoint(mouseX, mouseY);
+      if (!container || !pointerTracked || document.hidden) return mark(null);
+      const el = document.elementFromPoint(pointerX, pointerY);
       mark(el && container.contains(el) ? el.closest("a") : null);
     };
     frame = requestAnimationFrame(tick);
