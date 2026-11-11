@@ -25,5 +25,11 @@ export function useMediaQuery(query: string): boolean {
 
 export const useIsPhone = () => useMediaQuery(PHONE_MEDIA);
 
+/**
+ * A phone whose screen is comfortably tall (620px and up). Keep in sync with
+ * the `tall-phone:` variant in src/styles/App.css.
+ */
+export const TALL_PHONE_MEDIA = "(max-width: 47.99rem) and (min-height: 38.75rem)";
+
 /** Phones, and any device without a mouse-like pointer to follow. */
 export const NO_TILT_MEDIA = `${PHONE_MEDIA}, (hover: none)`;

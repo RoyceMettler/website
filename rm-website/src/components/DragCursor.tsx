@@ -89,16 +89,19 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       const target = targetRef.current;
       if (!target || !liveRef.current || !isMouse || !inside || document.hidden) return show(false);
 
-      const under = document.elementFromPoint(x, y);
       if (down) {
         // Never pop in mid-drag; keep a badge that was already up while the
         // pointer stays on the carousel.
-        if (shown && !(under && target.contains(under))) show(false);
+        if (shown) {
+          const under = document.elementFromPoint(x, y);
+          if (!(under && target.contains(under))) show(false);
+        }
         return;
       }
 
-      const hovered = target.querySelector('a[data-hover="true"]');
-      const card = hovered && under && hovered.contains(under) ? hovered : null;
+      // useCardHover already hit-tests once a frame; read its mark rather
+      // than hit-testing again.
+      const card = target.querySelector('a[data-hover="true"]');
       if (clickedCard && card !== clickedCard) clickedCard = null;
       const live = card && card !== clickedCard ? card : null;
 

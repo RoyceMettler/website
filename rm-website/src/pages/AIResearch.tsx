@@ -4,6 +4,7 @@ import React from "react";
 import TiltWrapper from "../components/TiltWrapper";
 import { motion } from "framer-motion";
 import { usePageSpawn } from "../components/PageTransition";
+import { heroImage } from "../components/CardList";
 import "../styles/App.css";
 
 const textVariant = {
@@ -59,7 +60,7 @@ const AIResearch: React.FC = () => {
               reflectionGap="mt-2"
             >
               <img
-                src="/assets/hero/mudd.jpg"
+                src={heroImage("/assets/hero/mudd.jpg")}
                 width={1800}
                 height={1200}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"

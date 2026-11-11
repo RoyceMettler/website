@@ -8,7 +8,7 @@ import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { HeroCard } from "../components/HeroSection";
-import { cardsInViewingOrder, type CardData } from "../components/CardList";
+import { cardImage, cardsInViewingOrder, type CardData } from "../components/CardList";
 import {
   homeLayerVariants,
   usePageTransition,
@@ -20,11 +20,19 @@ const cardClass =
   "[-webkit-tap-highlight-color:transparent] focus-visible:outline-2 " +
   "focus-visible:outline-offset-4 focus-visible:outline-indigo-300";
 
-const PhoneCard: React.FC<{ card: CardData; animateIn: boolean }> = ({ card, animateIn }) => {
+/** Real pixels a list card is wide: the screen minus the page padding. */
+const listImageWidth = () =>
+  Math.ceil((Math.min(window.innerWidth, 768) - 32) * Math.min(window.devicePixelRatio || 1, 3));
+
+const PhoneCard: React.FC<{ card: CardData; animateIn: boolean; imageWidth: number }> = ({
+  card,
+  animateIn,
+  imageWidth,
+}) => {
   const body = (
     <span className="relative block aspect-[3/2] overflow-hidden rounded-2xl shadow-xl ring-1 ring-white/10">
       <img
-        src={card.image}
+        src={cardImage(card, imageWidth)}
         alt=""
         loading="lazy"
         decoding="async"
@@ -70,6 +78,7 @@ const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
   // Arriving by a page transition, the slide is the entrance. On a direct
   // load, fade the intro and the cards in instead.
   const [animateIn] = useState(() => direction === "none" && !reduced && !relayout);
+  const [imageWidth] = useState(listImageWidth);
 
   return (
     <motion.div
@@ -90,7 +99,7 @@ const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {cardsInViewingOrder.map((card) => (
             <li key={card.link}>
-              <PhoneCard card={card} animateIn={animateIn} />
+              <PhoneCard card={card} animateIn={animateIn} imageWidth={imageWidth} />
             </li>
           ))}
         </ul>

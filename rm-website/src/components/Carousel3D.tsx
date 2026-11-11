@@ -11,7 +11,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import Card from "./Card";
 import DragCursor from "./DragCursor";
-import { cards } from "./CardList";
+import { cards, cardImage, cardImageWidth } from "./CardList";
 import { useCardHover } from "../hooks/useCardHover";
 
 const BASE_RADIUS = 100;
@@ -19,9 +19,26 @@ const BASE_VIEWPORT_WIDTH = 1920;
 const BASE_CONTAINER_HEIGHT = 900;
 const AUTO_ROTATION_SPEED = 0.003;
 const VELOCITY_DAMPING = 0.05;
+/** Share of the remaining distance the ring covers per (60fps) frame. */
+const OFFSET_EASE = 0.03;
+const DRAG_SPEED = 0.02;
 const TILT_DEG = -5;
 /** Same as Card's CLICK_TOLERANCE: more mouse movement than this is a drag. */
 const DRAG_TOLERANCE = 5;
+
+// The ring's motion lives outside React on purpose. It changes every frame,
+// and keeping it in React state re-rendered the whole carousel (13 cards, each
+// with its own drei <Html> React root) on every frame and every mouse move,
+// which is what made it slow. Being module-level it also survives leaving the
+// page: coming back to Portfolio, the ring is where it was left.
+const ring = {
+  /** Where the ring is heading (dragging and auto-rotation move this). */
+  target: 0,
+  /** Where the ring is drawn; eases toward `target`. */
+  offset: 0,
+  velocity: AUTO_ROTATION_SPEED,
+  dragging: false,
+};
 
 // The "Drag or click" hint is only there to show that the ring can be dragged.
 // Once the visitor has really dragged it (about a second of dragging, or
@@ -67,21 +84,31 @@ function ScaleOverride({
 }
 
 const CarouselScene: React.FC<{
-  targetOffset: number;
   scaleFactor: number;
-}> = ({ targetOffset, scaleFactor }) => {
+  /** How wide (in real pixels) card images need to be on this screen. */
+  imageWidth: number;
+}> = ({ scaleFactor, imageWidth }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const offset = useRef(0);
   const radius = BASE_RADIUS * scaleFactor;
 
-  useFrame(() => {
-    offset.current += (targetOffset - offset.current) * 0.03;
+  useFrame((_, delta) => {
+    // Time in 60fps frames, so the ring turns at its intended speed on a slow
+    // machine too instead of slowing down with the frame rate.
+    const frames = Math.min(delta * 60, 10);
+    if (!ring.dragging) {
+      ring.velocity +=
+        (AUTO_ROTATION_SPEED - ring.velocity) * (1 - Math.pow(1 - VELOCITY_DAMPING, frames));
+      ring.target += ring.velocity * frames;
+    }
+    // At 60fps and above this is the original per-frame easing; below that it
+    // covers the ground of the frames that were missed.
+    ring.offset += (ring.target - ring.offset) * (1 - Math.pow(1 - OFFSET_EASE, Math.max(1, frames)));
     if (!groupRef.current) return;
 
     groupRef.current.children.forEach((child, index) => {
       const card = child as THREE.Group;
       const baseAngle = (index * Math.PI * 2) / cards.length;
-      const angle = baseAngle + offset.current / 5;
+      const angle = baseAngle + ring.offset / 5;
       const x = radius * Math.sin(angle);
       const z = radius * Math.cos(angle);
       card.position.set(x, 0, z);
@@ -90,13 +117,19 @@ const CarouselScene: React.FC<{
     });
   });
 
+  // Everything visible here is DOM (the cards are drei <Html>); the WebGL
+  // scene only supplies the 3D maths. A frame callback with a priority tells
+  // react-three-fiber not to draw the (empty, transparent) canvas each frame.
+  useFrame(() => {}, 1);
+
   return (
     <group ref={groupRef} rotation={[0, 0, THREE.MathUtils.degToRad(TILT_DEG)]}>
       {cards.map((c, i) => (
         <Card
           key={i}
           {...c}
-          angle={(i * Math.PI * 2) / cards.length + offset.current / 5}
+          image={cardImage(c, imageWidth)}
+          angle={(i * Math.PI * 2) / cards.length}
           scaleFactor={scaleFactor}
         />
       ))}
@@ -105,15 +138,8 @@ const CarouselScene: React.FC<{
 };
 
 const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true }) => {
-  const [targetOffset, setTargetOffset] = useState(0);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const scrollSpeed = 0.02;
   const containerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const velocityRef = useRef(AUTO_ROTATION_SPEED);
-  const lastFrameTime = useRef(performance.now());
-  const animationFrameId = useRef<number | null>(null);
   // Not rendered at all if it had already retired when the page mounted;
   // when it retires now, it stays mounted so the badge can fade out.
   const [hintAtMount] = useState(() => !hintIsDone());
@@ -121,29 +147,6 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
   useCardHover(containerRef);
 
   const scaleFactor = windowWidth / BASE_VIEWPORT_WIDTH;
-
-  const animateCarousel = () => {
-    const now = performance.now();
-    const deltaTime = Math.min((now - lastFrameTime.current) / 16.67, 2);
-    lastFrameTime.current = now;
-
-    if (!dragging.current) {
-      const velocityDiff = AUTO_ROTATION_SPEED - velocityRef.current;
-      velocityRef.current += velocityDiff * VELOCITY_DAMPING * deltaTime;
-      setTargetOffset((prev) => prev + velocityRef.current * deltaTime);
-    }
-
-    animationFrameId.current = requestAnimationFrame(animateCarousel);
-  };
-
-  useEffect(() => {
-    lastFrameTime.current = performance.now();
-    animationFrameId.current = requestAnimationFrame(animateCarousel);
-    return () => {
-      if (animationFrameId.current !== null)
-        cancelAnimationFrame(animationFrameId.current);
-    };
-  }, []);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -153,6 +156,7 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
 
   useEffect(() => {
     const root = document.documentElement;
+    let lastX = 0;
     let downX = 0;
     let downY = 0;
     let active = false; // this press has moved past the click tolerance
@@ -175,20 +179,20 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
     };
 
     const endDrag = () => {
-      dragging.current = false;
+      ring.dragging = false;
       active = false;
       root.classList.remove("carousel-dragging");
     };
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0 || !onRing(e)) return;
-      dragging.current = true;
+      ring.dragging = true;
       active = false;
-      startX.current = e.clientX;
+      lastX = e.clientX;
       downX = e.clientX;
       downY = e.clientY;
     };
     const handleMouseMove = (e: MouseEvent) => {
-      if (!dragging.current) return;
+      if (!ring.dragging) return;
       // The button came up somewhere we couldn't see (outside the window).
       if ((e.buttons & 1) === 0) return endDrag();
       // Past the click tolerance it is a drag for sure: show the grabbing
@@ -199,7 +203,7 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
         lastMoveAt = now;
         root.classList.add("carousel-dragging");
       }
-      const delta = e.clientX - startX.current;
+      const delta = e.clientX - lastX;
       if (active && !retired) {
         // Time counts only while the mouse is moving (pauses are capped).
         dragPractice += Math.min(now - lastMoveAt, 100) / HINT_DONE_MS + Math.abs(delta) / HINT_DONE_PX;
@@ -214,9 +218,9 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
           setHintRetired(true);
         }
       }
-      velocityRef.current = -delta * scrollSpeed * 0.1;
-      setTargetOffset((prev) => prev - delta * scrollSpeed);
-      startX.current = e.clientX;
+      ring.velocity = -delta * DRAG_SPEED * 0.1;
+      ring.target -= delta * DRAG_SPEED;
+      lastX = e.clientX;
     };
 
     window.addEventListener("mousedown", handleMouseDown);
@@ -260,8 +264,8 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
           <ambientLight intensity={1.2} />
           <pointLight position={[10, 10, 10]} />
           <CarouselScene
-            targetOffset={targetOffset}
             scaleFactor={scaleFactor}
+            imageWidth={cardImageWidth()}
           />
         </Suspense>
       </Canvas>
@@ -269,4 +273,6 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
   );
 };
 
-export default Carousel3D;
+// Memoised: the home page re-renders on every scroll event, and the carousel
+// (with its 13 cards) only needs to when the hint is switched on or off.
+export default React.memo(Carousel3D);

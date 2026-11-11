@@ -4,6 +4,7 @@ import React from "react";
 import TiltWrapper from "../components/TiltWrapper";
 import { motion } from "framer-motion";
 import { usePageSpawn } from "../components/PageTransition";
+import { heroImage } from "../components/CardList";
 import "../styles/App.css";
 
 const textVariant = {
@@ -59,7 +60,7 @@ const TechHelp: React.FC = () => {
               reflectionGap="mt-2"
             >
               <img
-                src="/assets/hero/seniorcenter.jpg"
+                src={heroImage("/assets/hero/seniorcenter.jpg")}
                 width={1536}
                 height={853}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"

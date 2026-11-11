@@ -10,6 +10,15 @@
   }
 }
 
+/* Phones with a comfortably tall screen (most current ones, even with the
+   browser's toolbars showing), as opposed to small or older phones.
+   Keep in sync with TALL_PHONE_MEDIA in src/hooks/useMediaQuery.ts. */
+@custom-variant tall-phone {
+  @media (max-width: 47.99rem) and (min-height: 38.75rem) {
+    @slot;
+  }
+}
+
 /* Phones: keep focused / scrolled-to elements clear of the fixed top bar. */
 @media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
   html {

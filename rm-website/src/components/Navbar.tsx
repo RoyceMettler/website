@@ -73,6 +73,8 @@ const AnimatedNavItem: React.FC<NavItem> = ({
   const { pathname } = useLocation();
   const isCurrent = !external && normalizePath(pathname) === normalizePath(to);
   const letters = text.split("");
+  // The page you are on stays in the hover colour.
+  const lit = hover || isCurrent;
 
   return (
     <li
@@ -96,7 +98,7 @@ const AnimatedNavItem: React.FC<NavItem> = ({
               letter={char}
               index={i}
               total={letters.length}
-              isHovering={hover}
+              isHovering={lit}
             />
           ))}
         </a>
@@ -115,7 +117,7 @@ const AnimatedNavItem: React.FC<NavItem> = ({
               letter={char}
               index={i}
               total={letters.length}
-              isHovering={hover}
+              isHovering={lit}
             />
           ))}
         </Link>
