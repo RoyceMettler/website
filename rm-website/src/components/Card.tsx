@@ -124,7 +124,9 @@ const Card: React.FC<CardProps> = ({
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onClick={onClick}
-          className="block w-full h-full cursor-pointer select-none transition-transform duration-600 ease-in-out hover:scale-105"
+          // Hover look comes from data-hover (set by useCardHover), not from
+          // :hover, which goes stale when the ring turns under a still mouse.
+          className="block w-full h-full cursor-default data-[hover=true]:cursor-pointer select-none transition-transform duration-600 ease-in-out data-[hover=true]:scale-105"
           style={{ width, height }}
         >
           {content}

@@ -45,9 +45,7 @@ const AIResearch: React.FC = () => {
             September 2023 - June 2024
           </motion.p>
 
-          <motion.div
-            custom={2}
-            variants={textVariant}
+          <div
             className="relative float-none sm:float-right sm:ml-10 mb-20 w-full sm:w-2/5 lg:w-2/5 xl:w-3/5 max-w-xl"
           >
             <TiltWrapper
@@ -67,7 +65,7 @@ const AIResearch: React.FC = () => {
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>
-          </motion.div>
+          </div>
 
           <motion.p custom={3} variants={textVariant}>
             I first met 

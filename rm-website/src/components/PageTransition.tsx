@@ -78,8 +78,6 @@ export const homeLayerVariants: Variants = {
 };
 
 type PageTransitionState = TransitionCustom & {
-  /** False while the page is still sliding in. */
-  entered: boolean;
   /** True the first time this page is shown since the site was loaded. */
   firstVisit: boolean;
 };
@@ -87,7 +85,6 @@ type PageTransitionState = TransitionCustom & {
 const PageTransitionContext = createContext<PageTransitionState>({
   direction: "none",
   reduced: false,
-  entered: true,
   firstVisit: true,
 });
 
@@ -99,13 +96,13 @@ const visitedPages = new Set<string>();
 
 /**
  * `initial`/`animate` for a page's staggered fade-in container (children use
- * "hidden"/"show" variants). First visit: hidden until the page has slid in,
- * then the fade-in plays. Later visits: everything is simply there.
+ * "hidden"/"show" variants). First visit: the fade-in starts as soon as the
+ * page mounts, so it plays while the page slides in rather than after a
+ * blank pause. Later visits: everything is simply there.
  */
 export function usePageSpawn() {
-  const { entered, firstVisit } = useContext(PageTransitionContext);
-  if (!firstVisit) return { initial: false, animate: "show" } as const;
-  return { initial: "hidden", animate: entered ? "show" : "hidden" } as const;
+  const { firstVisit } = useContext(PageTransitionContext);
+  return { initial: firstVisit ? "hidden" : false, animate: "show" } as const;
 }
 
 /** Clip `el` to the part of it that is on screen right now. */
@@ -183,7 +180,6 @@ type Props = {
 };
 
 const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, children }) => {
-  const [entered, setEntered] = useState(direction === "none");
   const [firstVisit] = useState(() => !visitedPages.has(path));
   useEffect(() => {
     visitedPages.add(path);
@@ -195,22 +191,8 @@ const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, child
   // layers do), so it must not be clipped either.
   useViewportSliceClip(ref, !isHome);
 
-  // Release the page's own fade-ins once the slide has (nearly) landed. A
-  // timer rather than onAnimationComplete: the latter is lost when StrictMode
-  // remounts the wrapper mid-animation.
-  useEffect(() => {
-    if (entered) return;
-    const enterSeconds = reduced
-      ? (REDUCED.duration as number)
-      : direction === "lateral"
-        ? (FADE_IN.duration as number)
-        : (ENTER.duration as number) * 0.8;
-    const timer = setTimeout(() => setEntered(true), enterSeconds * 1000);
-    return () => clearTimeout(timer);
-  }, [entered, direction, reduced]);
-
   return (
-    <PageTransitionContext.Provider value={{ ...custom, entered, firstVisit }}>
+    <PageTransitionContext.Provider value={{ ...custom, firstVisit }}>
       <motion.div
         ref={ref}
         custom={custom}

@@ -19,7 +19,7 @@ const ScrollIndicator: React.FC<ScrollIndicatorProps> = ({ scrollPosition, insta
       style={{ opacity }}
     >
       <div className="flex flex-col items-center text-white">
-        <p className="text-sm font-medium">Scroll Down for my Portfolio</p>
+        <p className="text-sm font-medium">Scroll Down</p>
       </div>
     </div>
   );

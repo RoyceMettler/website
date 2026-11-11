@@ -24,3 +24,6 @@ export function useMediaQuery(query: string): boolean {
 }
 
 export const useIsPhone = () => useMediaQuery(PHONE_MEDIA);
+
+/** Phones, and any device without a mouse-like pointer to follow. */
+export const NO_TILT_MEDIA = `${PHONE_MEDIA}, (hover: none)`;

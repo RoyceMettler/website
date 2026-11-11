@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect, CSSProperties } from 'react';
 import { usePageTransition } from './PageTransition';
+import { NO_TILT_MEDIA, useMediaQuery } from '../hooks/useMediaQuery';
 
 interface TiltWrapperProps {
   children: React.ReactNode;
@@ -41,6 +42,10 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
   reflectionGap = 'mt-2',
 }) => {
   const tiltRef = useRef<HTMLDivElement>(null);
+  // The tilt follows the mouse. On phones and touch-only devices there is no
+  // mouse to follow (a tap would leave it stuck tilted and enlarged), so the
+  // content stays flat there.
+  const flat = useMediaQuery(NO_TILT_MEDIA);
   const [tiltStyle, setTiltStyle] = useState<CSSProperties>({
     transform: `perspective(${perspective}px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)`,
     transition: `transform ${transitionSpeed}ms ${easing}`,
@@ -60,7 +65,7 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
   };
 
   useEffect(() => {
-    if (!alwaysActive && !isHovering) return;
+    if (flat || (!alwaysActive && !isHovering)) return;
     const handleMouseMove = (e: MouseEvent) => {
       if (!tiltRef.current) return;
 
@@ -82,10 +87,10 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
 
     document.addEventListener('mousemove', handleMouseMove);
     return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, [alwaysActive, isHovering, maxTilt, perspective, scale, transitionSpeed, easing, hoverScaleEffect]);
+  }, [flat, alwaysActive, isHovering, maxTilt, perspective, scale, transitionSpeed, easing, hoverScaleEffect]);
 
   useEffect(() => {
-    if (!gyroscope) return;
+    if (!gyroscope || flat) return;
     const handleDeviceOrientation = (e: DeviceOrientationEvent) => {
       if (!tiltRef.current || e.beta == null || e.gamma == null) return;
       const beta = Math.max(-maxTilt, Math.min(maxTilt, e.beta / 3));
@@ -95,7 +100,7 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
 
     window.addEventListener('deviceorientation', handleDeviceOrientation);
     return () => window.removeEventListener('deviceorientation', handleDeviceOrientation);
-  }, [gyroscope, maxTilt, perspective, scale, easing, hoverScaleEffect]);
+  }, [gyroscope, flat, maxTilt, perspective, scale, easing, hoverScaleEffect]);
 
   const handleMouseEnter = () => setIsHovering(true);
   const handleMouseLeave = () => {
@@ -149,7 +154,7 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
   return (
     <div
       ref={tiltRef}
-      style={tiltStyle}
+      style={flat ? undefined : tiltStyle}
       className={`tilt-wrapper ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

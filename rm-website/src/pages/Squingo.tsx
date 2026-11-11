@@ -44,9 +44,7 @@ const Squingo: React.FC = () => {
             November 2023
           </motion.p>
 
-          <motion.div
-            custom={2}
-            variants={textVariant}
+          <div
             className="relative mb-20 w-full max-w-6xl mx-auto"
           >
             <div 
@@ -75,7 +73,7 @@ const Squingo: React.FC = () => {
                 scrolling="no"
               />
             </div>
-          </motion.div>
+          </div>
 
           <motion.p custom={3} variants={textVariant} className="text-3xl font-semibold leading-relaxed">
 Note: If the game is very laggy, try switching to Firefox.</motion.p>

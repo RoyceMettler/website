@@ -50,7 +50,7 @@ function App() {
       <Navbar />
       {/* overflow-clip keeps a page that is sliding in from growing the
           document; it doesn't clip the home page's fixed layers. */}
-      <div id="page-content" className="overflow-clip">
+      <div className="overflow-clip">
       <AnimatePresence mode="wait" custom={{ direction, reduced }}>
       <PageTransition key={path} path={path} from={from} direction={direction} reduced={reduced}>
       <Routes location={location}>

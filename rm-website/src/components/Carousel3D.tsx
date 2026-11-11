@@ -12,6 +12,7 @@ import * as THREE from "three";
 import Card from "./Card";
 import DragCursor from "./DragCursor";
 import { cards } from "./CardList";
+import { useCardHover } from "../hooks/useCardHover";
 
 const BASE_RADIUS = 100;
 const BASE_VIEWPORT_WIDTH = 1920;
@@ -21,6 +22,24 @@ const VELOCITY_DAMPING = 0.05;
 const TILT_DEG = -5;
 /** Same as Card's CLICK_TOLERANCE: more mouse movement than this is a drag. */
 const DRAG_TOLERANCE = 5;
+
+// The "Drag or click" hint is only there to show that the ring can be dragged.
+// Once the visitor has really dragged it (about a second of dragging, or
+// about 600px, or a mix of the two) it retires for good, remembered in
+// localStorage so it doesn't come back on later visits.
+const HINT_DONE_KEY = "carousel-drag-hint-done";
+const HINT_DONE_MS = 1000;
+const HINT_DONE_PX = 600;
+/** 0..1: how much real dragging has been done since the site was loaded. */
+let dragPractice = 0;
+
+const hintIsDone = () => {
+  try {
+    return localStorage.getItem(HINT_DONE_KEY) === "1";
+  } catch {
+    return false; // storage blocked: the hint just lasts for this visit
+  }
+};
 
 function ScaleOverride({
   width,
@@ -94,6 +113,11 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
   const velocityRef = useRef(AUTO_ROTATION_SPEED);
   const lastFrameTime = useRef(performance.now());
   const animationFrameId = useRef<number | null>(null);
+  // Not rendered at all if it had already retired when the page mounted;
+  // when it retires now, it stays mounted so the badge can fade out.
+  const [hintAtMount] = useState(() => !hintIsDone());
+  const [hintRetired, setHintRetired] = useState(!hintAtMount);
+  useCardHover(containerRef);
 
   const scaleFactor = windowWidth / BASE_VIEWPORT_WIDTH;
 
@@ -130,6 +154,9 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
     const root = document.documentElement;
     let downX = 0;
     let downY = 0;
+    let active = false; // this press has moved past the click tolerance
+    let lastMoveAt = 0;
+    let retired = hintIsDone();
 
     // A drag has to start on the ring itself: on a card, or in the narrow gap
     // right beside one. Hit-tested rather than measured, so anything drawn
@@ -148,11 +175,13 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
 
     const endDrag = () => {
       dragging.current = false;
+      active = false;
       root.classList.remove("carousel-dragging");
     };
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0 || !onRing(e)) return;
       dragging.current = true;
+      active = false;
       startX.current = e.clientX;
       downX = e.clientX;
       downY = e.clientY;
@@ -163,10 +192,27 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
       if ((e.buttons & 1) === 0) return endDrag();
       // Past the click tolerance it is a drag for sure: show the grabbing
       // cursor (everywhere, until release).
-      if (Math.hypot(e.clientX - downX, e.clientY - downY) > DRAG_TOLERANCE) {
+      const now = performance.now();
+      if (!active && Math.hypot(e.clientX - downX, e.clientY - downY) > DRAG_TOLERANCE) {
+        active = true;
+        lastMoveAt = now;
         root.classList.add("carousel-dragging");
       }
       const delta = e.clientX - startX.current;
+      if (active && !retired) {
+        // Time counts only while the mouse is moving (pauses are capped).
+        dragPractice += Math.min(now - lastMoveAt, 100) / HINT_DONE_MS + Math.abs(delta) / HINT_DONE_PX;
+        lastMoveAt = now;
+        if (dragPractice >= 1) {
+          retired = true;
+          try {
+            localStorage.setItem(HINT_DONE_KEY, "1");
+          } catch {
+            // storage blocked: retired for this visit only
+          }
+          setHintRetired(true);
+        }
+      }
       velocityRef.current = -delta * scrollSpeed * 0.1;
       setTargetOffset((prev) => prev - delta * scrollSpeed);
       startX.current = e.clientX;
@@ -194,7 +240,13 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
       className="w-full overflow-visible"
       style={{ height: `${BASE_CONTAINER_HEIGHT * scaleFactor}px` }}
     >
-      <DragCursor targetRef={containerRef} tiltDeg={TILT_DEG} enabled={hintEnabled} />
+      {hintAtMount && (
+        <DragCursor
+          targetRef={containerRef}
+          tiltDeg={TILT_DEG}
+          enabled={hintEnabled && !hintRetired}
+        />
+      )}
       <Canvas
         dpr={window.devicePixelRatio}
         camera={{ position: [0, 0, 10], fov: 32 }}

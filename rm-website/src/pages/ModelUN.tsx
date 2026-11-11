@@ -45,9 +45,7 @@ const ModelUN: React.FC = () => {
             September 2017 - June 2024
           </motion.p>
 
-          <motion.div
-            custom={2}
-            variants={textVariant}
+          <div
             className="relative float-none sm:float-right sm:ml-10 mb-20 w-full sm:w-2/5 lg:w-2/5 xl:w-3/5 max-w-xl"
           >
             <TiltWrapper
@@ -67,7 +65,7 @@ const ModelUN: React.FC = () => {
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>
-          </motion.div>
+          </div>
 
           <motion.p custom={3} variants={textVariant}>
            I first got involved with Model United Nations back in high school, when I signed up to be a delegate without really knowing what to expect. Very quickly I discovered that I thrived in crisis committees, which are the smaller, more improvisational side of MUN where events unfold in real time and delegates have to respond to ever-changing scenarios. I loved the pressure of thinking on my feet, building alliances on the fly, and weaving together historical knowledge with creative strategy. Whereas General Assembly sessions often revolved around long debates and formal resolutions, crisis felt alive, dynamic, and almost theatrical. It was where I could test my instincts as both a leader and a collaborator.

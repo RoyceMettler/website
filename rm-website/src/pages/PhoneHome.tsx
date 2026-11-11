@@ -8,7 +8,7 @@ import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { HeroCard } from "../components/HeroSection";
-import { cards, type CardData } from "../components/CardList";
+import { cardsInViewingOrder, type CardData } from "../components/CardList";
 import {
   homeLayerVariants,
   usePageTransition,
@@ -88,7 +88,7 @@ const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
           Portfolio
         </h2>
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          {cards.map((card) => (
+          {cardsInViewingOrder.map((card) => (
             <li key={card.link}>
               <PhoneCard card={card} animateIn={animateIn} />
             </li>

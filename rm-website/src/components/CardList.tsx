@@ -22,3 +22,14 @@ export const cards: CardData[] = [
   { label: "A Game Called Unipsycho",         image: "/assets/hero/unipsycho.png",      link: "/unipsycho"       },
   { label: "A Game Called Squingo",         image: "/assets/hero/squingo.png",      link: "/squingo"       },
 ];
+
+// The order the carousel presents the cards in: it opens on "AI Engineer at
+// Vitu" in the middle, and as it turns the earlier entries come round next
+// (Research, Teaching, ...), ending with "Tech Help for Seniors". The phone
+// list shows them top to bottom in that same order.
+const FIRST_SHOWN = "/ai-engineer-at-vitu";
+const firstShown = Math.max(0, cards.findIndex((card) => card.link === FIRST_SHOWN));
+export const cardsInViewingOrder: CardData[] = [
+  ...cards.slice(0, firstShown + 1).reverse(),
+  ...cards.slice(firstShown + 1).reverse(),
+];

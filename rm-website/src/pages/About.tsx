@@ -22,7 +22,7 @@ const textVariant = {
 const About: React.FC = () => {
   const spawn = usePageSpawn();
   return (
-    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between py-20 min-h-screen text-white overflow-x-hidden">
+    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between py-20 min-h-screen text-white overflow-x-clip">
       <div className="w-full px-12 md:px-20 lg:px-32 flex flex-col lg:flex-row items-center justify-between gap-16">
         <motion.div
           initial={spawn.initial}

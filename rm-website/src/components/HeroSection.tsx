@@ -1,22 +1,11 @@
 // src/components/HeroSection.tsx
 
 import React, { useLayoutEffect, useRef, useState } from "react";
-import { motion, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import HireMeButton from "./HireMeButton.tsx";
 
 const sendEmail = () => {
   window.location.href = "mailto:roycemettler@gmail.com";
-};
-
-// The same staggered fade-up as the text on the other pages: the card first,
-// then its contents one after another.
-const spawnVariant: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" },
-  }),
 };
 
 /**
@@ -59,14 +48,14 @@ type HeroCardProps = {
 
 /**
  * The intro card. The default is the large desktop card that HeroSection
- * floats over the carousel.
+ * floats over the carousel. With `spawn`, the whole card fades up into place
+ * as one piece.
  */
 export const HeroCard: React.FC<HeroCardProps> = ({ compact = false, spawn = false }) => (
   <motion.div
-    initial={spawn ? "hidden" : false}
-    animate="show"
-    custom={0}
-    variants={spawnVariant}
+    initial={spawn ? { opacity: 0, y: 20 } : false}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
     className={
       compact
         ? "w-full bg-black/80 p-6 rounded-3xl shadow-2xl"
@@ -75,16 +64,10 @@ export const HeroCard: React.FC<HeroCardProps> = ({ compact = false, spawn = fal
   >
     <div className={`flex flex-col-reverse md:flex-row items-center ${compact ? "gap-6" : "gap-10"}`}>
       <div className="flex-1 min-w-0 text-left text-white">
-        <motion.p
-          custom={2}
-          variants={spawnVariant}
-          className={compact ? "text-base text-white/80 mb-1" : "text-lg md:text-xl text-white/80 mb-2"}
-        >
+        <p className={compact ? "text-base text-white/80 mb-1" : "text-lg md:text-xl text-white/80 mb-2"}>
           Hi, I’m
-        </motion.p>
-        <motion.h1
-          custom={3}
-          variants={spawnVariant}
+        </p>
+        <h1
           className={
             compact
               ? "text-4xl font-extrabold leading-tight mb-3 -ml-0.5"
@@ -92,10 +75,8 @@ export const HeroCard: React.FC<HeroCardProps> = ({ compact = false, spawn = fal
           }
         >
           Royce Mettler
-        </motion.h1>
-        <motion.h2
-          custom={4}
-          variants={spawnVariant}
+        </h1>
+        <h2
           className={
             compact
               ? "text-xl text-indigo-300 font-medium mb-4"
@@ -103,33 +84,23 @@ export const HeroCard: React.FC<HeroCardProps> = ({ compact = false, spawn = fal
           }
         >
           AI Engineer & Developer
-        </motion.h2>
-        <motion.p
-          custom={5}
-          variants={spawnVariant}
-          className={compact ? "text-base text-gray-300 mb-6" : "text-lg md:text-xl text-gray-300 mb-8 max-w-prose"}
-        >
+        </h2>
+        <p className={compact ? "text-base text-gray-300 mb-6" : "text-lg md:text-xl text-gray-300 mb-8 max-w-prose"}>
           I'm a Northwestern University graduate with a double bachelor's in
           computer science and math with a concentration in AI. I also have 1.33 YOE
           as an AI Engineer where I built agents and predictive neural nets. Welcome to my site!
-        </motion.p>
+        </p>
 
-        <motion.div
-          custom={6}
-          variants={spawnVariant}
-          className={compact ? "flex justify-center" : "flex justify-center mt-20"}
-        >
+        <div className={compact ? "flex justify-center" : "flex justify-center mt-20"}>
           {compact ? (
             <HireMeButton text="Hire Me" outlined width={200} height={72} onClick={sendEmail} />
           ) : (
             <HireMeButton text="Hire Me" outlined onClick={sendEmail} />
           )}
-        </motion.div>
+        </div>
       </div>
 
-      <motion.div
-        custom={1}
-        variants={spawnVariant}
+      <div
         className={
           compact
             ? "shrink-0 w-full max-w-60 aspect-[4/5] overflow-hidden rounded-3xl border-4 border-indigo-500 shadow-lg"
@@ -137,7 +108,7 @@ export const HeroCard: React.FC<HeroCardProps> = ({ compact = false, spawn = fal
         }
       >
         <HeroPhoto />
-      </motion.div>
+      </div>
     </div>
   </motion.div>
 );

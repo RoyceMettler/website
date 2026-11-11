@@ -81,10 +81,9 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
       if (next !== shown) setVisible((shown = next));
     };
 
-    // Checked every frame: the ring turns under a still cursor, and browsers
-    // don't refresh :hover until the mouse moves, so a card can stay
-    // ":hover" after it has slid away. Trust :hover only for the card that is
-    // really under the cursor.
+    // Checked every frame, since the ring turns under a still cursor. The
+    // hovered card is the one useCardHover has marked (it hit-tests every
+    // frame too, because CSS :hover goes stale until the mouse moves).
     const tick = () => {
       frame = requestAnimationFrame(tick);
       const target = targetRef.current;
@@ -98,7 +97,7 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
         return;
       }
 
-      const hovered = target.querySelector("a:hover");
+      const hovered = target.querySelector('a[data-hover="true"]');
       const card = hovered && under && hovered.contains(under) ? hovered : null;
       if (clickedCard && card !== clickedCard) clickedCard = null;
       const live = card && card !== clickedCard ? card : null;
