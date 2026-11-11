@@ -27,6 +27,9 @@ function DesktopHome({ relayout }: { relayout: boolean }) {
   const { showHero, showCarousel } = useInitialAnimations(relayout);
   const { scrollProgress, scrollOpacity } = useScrollProgress();
   const { direction, reduced } = usePageTransition();
+  // The intro card fades in when the site is first opened on this page.
+  // Arriving by a page transition, the slide is the entrance instead.
+  const [spawnHero] = useState(() => direction === "none" && !reduced && !relayout);
 
   // Use pixel scroll (scrollOpacity) for hero offset/visibility so
   // small upward scrolls reliably reveal the hero in production builds.
@@ -67,7 +70,7 @@ function DesktopHome({ relayout }: { relayout: boolean }) {
             userSelect: heroGone ? 'none' : 'auto',
           }}
         >
-          <HeroSection scrollPosition={heroOffsetY} />
+          <HeroSection scrollPosition={heroOffsetY} spawn={spawnHero} />
         </div>
 
         <div

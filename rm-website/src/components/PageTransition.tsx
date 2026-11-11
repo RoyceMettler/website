@@ -77,18 +77,36 @@ export const homeLayerVariants: Variants = {
     reduced ? {} : { y: "-100vh", transition: EXIT },
 };
 
-type PageTransitionState = TransitionCustom & { entered: boolean };
+type PageTransitionState = TransitionCustom & {
+  /** False while the page is still sliding in. */
+  entered: boolean;
+  /** True the first time this page is shown since the site was loaded. */
+  firstVisit: boolean;
+};
 
 const PageTransitionContext = createContext<PageTransitionState>({
   direction: "none",
   reduced: false,
   entered: true,
+  firstVisit: true,
 });
 
 export const usePageTransition = () => useContext(PageTransitionContext);
 
-/** False while the page is still sliding in; use it to hold back fade-ins. */
-export const usePageEntered = () => useContext(PageTransitionContext).entered;
+// Pages shown so far since the site was loaded (a reload starts over). A
+// page's own fade-ins play on its first visit only.
+const visitedPages = new Set<string>();
+
+/**
+ * `initial`/`animate` for a page's staggered fade-in container (children use
+ * "hidden"/"show" variants). First visit: hidden until the page has slid in,
+ * then the fade-in plays. Later visits: everything is simply there.
+ */
+export function usePageSpawn() {
+  const { entered, firstVisit } = useContext(PageTransitionContext);
+  if (!firstVisit) return { initial: false, animate: "show" } as const;
+  return { initial: "hidden", animate: entered ? "show" : "hidden" } as const;
+}
 
 /** Clip `el` to the part of it that is on screen right now. */
 const clipToViewport = (el: HTMLElement) => {
@@ -166,6 +184,10 @@ type Props = {
 
 const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, children }) => {
   const [entered, setEntered] = useState(direction === "none");
+  const [firstVisit] = useState(() => !visitedPages.has(path));
+  useEffect(() => {
+    visitedPages.add(path);
+  }, [path]);
   const custom: TransitionCustom = { direction, reduced };
   const isHome = path === "/";
   const ref = useRef<HTMLDivElement>(null);
@@ -188,7 +210,7 @@ const PageTransition: React.FC<Props> = ({ path, from, direction, reduced, child
   }, [entered, direction, reduced]);
 
   return (
-    <PageTransitionContext.Provider value={{ ...custom, entered }}>
+    <PageTransitionContext.Provider value={{ ...custom, entered, firstVisit }}>
       <motion.div
         ref={ref}
         custom={custom}

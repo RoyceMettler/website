@@ -1,8 +1,8 @@
 // src/components/DragCursor.tsx
 //
 // A round "Drag or click" badge that follows the mouse while it hovers one of
-// the carousel's cards, once that card has done its hover scale-up. It sits to
-// the cursor's left along the carousel's tilt (text kept level). Rendered into
+// the carousel's cards, appearing as that card starts its hover scale-up. It
+// sits to the cursor's left along the carousel's tilt (text kept level). Rendered into
 // <body> so the carousel's scaled/translated wrappers can't offset it, and
 // only for a mouse (never on touch screens).
 
@@ -21,18 +21,10 @@ import { useMediaQuery } from "../hooks/useMediaQuery";
 const SIZE = 92;
 /** Distance from the cursor to the badge's centre. */
 const GAP = 78;
-/** Card.tsx scales a hovered card to 1.05; appear once it is 90% of the way. */
-const EXPANDED_SCALE = 1 + 0.05 * 0.9;
 /** Bridge the small gaps between neighbouring cards without a flicker. */
 const HIDE_DELAY_MS = 140;
 /** Same as Card's CLICK_TOLERANCE: more movement than this is a drag. */
 const CLICK_TOLERANCE = 5;
-
-/** The card's live CSS `scale` (Tailwind's scale-105 animates that property). */
-const cardScale = (card: Element) => {
-  const value = parseFloat(getComputedStyle(card).scale);
-  return Number.isFinite(value) ? value : 1;
-};
 
 type Props = {
   targetRef: React.RefObject<HTMLElement | null>;
@@ -120,8 +112,8 @@ const DragCursor: React.FC<Props> = ({ targetRef, tiltDeg, enabled }) => {
         if (performance.now() - lostAt >= HIDE_DELAY_MS) show(false);
         return;
       }
-      // Appear only once the hovered card has (nearly) finished growing.
-      if (live && cardScale(live) >= EXPANDED_SCALE) show(true);
+      // Appear as soon as a card is hovered, as it starts to grow.
+      if (live) show(true);
     };
     frame = requestAnimationFrame(tick);
 

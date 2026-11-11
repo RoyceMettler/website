@@ -85,13 +85,7 @@ const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
       exit="exit"
       className="relative z-10 mx-auto max-w-3xl px-4 pt-24 pb-16 text-white"
     >
-      <motion.div
-        initial={animateIn ? { opacity: 0, y: 16 } : false}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        <HeroCard compact />
-      </motion.div>
+      <HeroCard compact spawn={animateIn} />
 
       <section aria-labelledby="portfolio-heading" className="mt-10">
         <h2 id="portfolio-heading" className="mb-4 text-2xl font-bold text-indigo-300">

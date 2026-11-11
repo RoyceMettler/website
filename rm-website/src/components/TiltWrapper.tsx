@@ -1,6 +1,7 @@
 // src/components/TiltWrapper.tsx
 
 import React, { useRef, useState, useEffect, CSSProperties } from 'react';
+import { usePageTransition } from './PageTransition';
 
 interface TiltWrapperProps {
   children: React.ReactNode;
@@ -45,7 +46,10 @@ const TiltWrapper: React.FC<TiltWrapperProps> = ({
     transition: `transform ${transitionSpeed}ms ${easing}`,
   });
   const [isHovering, setIsHovering] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  // On a return visit to the page the content is simply there: no
+  // placeholder and no fade-in (a video shows its poster until it plays).
+  const { firstVisit } = usePageTransition();
+  const [isLoaded, setIsLoaded] = useState(!firstVisit);
   const fadeDuration = Math.max(300, transitionSpeed);
   const applyTilt = (rotateX: number, rotateY: number) => {
     const effectiveScale = hoverScaleEffect && isHovering ? scale * 1.05 : scale;

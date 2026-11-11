@@ -19,6 +19,8 @@ const BASE_CONTAINER_HEIGHT = 900;
 const AUTO_ROTATION_SPEED = 0.003;
 const VELOCITY_DAMPING = 0.05;
 const TILT_DEG = -5;
+/** Same as Card's CLICK_TOLERANCE: more mouse movement than this is a drag. */
+const DRAG_TOLERANCE = 5;
 
 function ScaleOverride({
   width,
@@ -87,7 +89,6 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
   const dragging = useRef(false);
   const startX = useRef(0);
   const scrollSpeed = 0.02;
-  const allowDrag = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const velocityRef = useRef(AUTO_ROTATION_SPEED);
@@ -126,48 +127,71 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
   }, []);
 
   useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      if (allowDrag.current) {
-        dragging.current = true;
-        startX.current = e.clientX;
-      }
+    const root = document.documentElement;
+    let downX = 0;
+    let downY = 0;
+
+    // A drag has to start on the ring itself: on a card, or in the narrow gap
+    // right beside one. Hit-tested rather than measured, so anything drawn
+    // over the cards (the intro card, the navbar) doesn't count.
+    const onRing = (e: MouseEvent) => {
+      const container = containerRef.current;
+      if (!container || !(e.target instanceof Element) || !container.contains(e.target)) return false;
+      if (e.target.closest("a")) return true;
+      const cardAt = (x: number) => {
+        const el = document.elementFromPoint(x, e.clientY);
+        return !!el && container.contains(el) && !!el.closest("a");
+      };
+      const reach = window.innerWidth * 0.04;
+      return cardAt(e.clientX - reach) || cardAt(e.clientX + reach);
     };
-    const handleMouseUp = () => {
+
+    const endDrag = () => {
       dragging.current = false;
+      root.classList.remove("carousel-dragging");
+    };
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0 || !onRing(e)) return;
+      dragging.current = true;
+      startX.current = e.clientX;
+      downX = e.clientX;
+      downY = e.clientY;
     };
     const handleMouseMove = (e: MouseEvent) => {
-      if (dragging.current) {
-        const delta = e.clientX - startX.current;
-        velocityRef.current = -delta * scrollSpeed * 0.1;
-        setTargetOffset((prev) => prev - delta * scrollSpeed);
-        startX.current = e.clientX;
+      if (!dragging.current) return;
+      // The button came up somewhere we couldn't see (outside the window).
+      if ((e.buttons & 1) === 0) return endDrag();
+      // Past the click tolerance it is a drag for sure: show the grabbing
+      // cursor (everywhere, until release).
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) > DRAG_TOLERANCE) {
+        root.classList.add("carousel-dragging");
       }
-    };
-    const handleEnter = () => (allowDrag.current = true);
-    const handleLeave = () => {
-      allowDrag.current = false;
-      dragging.current = false;
+      const delta = e.clientX - startX.current;
+      velocityRef.current = -delta * scrollSpeed * 0.1;
+      setTargetOffset((prev) => prev - delta * scrollSpeed);
+      startX.current = e.clientX;
     };
 
     window.addEventListener("mousedown", handleMouseDown);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("mouseup", endDrag);
     window.addEventListener("mousemove", handleMouseMove);
-    containerRef.current?.addEventListener("mouseenter", handleEnter);
-    containerRef.current?.addEventListener("mouseleave", handleLeave);
+    window.addEventListener("blur", endDrag);
+    window.addEventListener("dragend", endDrag);
 
     return () => {
+      endDrag();
       window.removeEventListener("mousedown", handleMouseDown);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mouseup", endDrag);
       window.removeEventListener("mousemove", handleMouseMove);
-      containerRef.current?.removeEventListener("mouseenter", handleEnter);
-      containerRef.current?.removeEventListener("mouseleave", handleLeave);
+      window.removeEventListener("blur", endDrag);
+      window.removeEventListener("dragend", endDrag);
     };
   }, []);
 
   return (
     <div
       ref={containerRef}
-      className="w-full cursor-grab active:cursor-grabbing overflow-visible"
+      className="w-full overflow-visible"
       style={{ height: `${BASE_CONTAINER_HEIGHT * scaleFactor}px` }}
     >
       <DragCursor targetRef={containerRef} tiltDeg={TILT_DEG} enabled={hintEnabled} />
