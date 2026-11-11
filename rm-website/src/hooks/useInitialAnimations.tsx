@@ -2,42 +2,24 @@
 
 import { useEffect, useState } from "react";
 
-/** `skip`: show everything at once (e.g. a layout swapped in after arrival). */
+/**
+ * Portfolio's load-in on desktop: the hero appears, then the carousel drops
+ * in. `skip`: everything is in place from the very first render (arriving by a
+ * page transition, or a layout swapped in later), so nothing plays.
+ */
 export function useInitialAnimations(skip = false) {
-  const [pageLoaded, setPageLoaded] = useState(false);
-  const [showHero, setShowHero] = useState(false);
-  const [showCarousel, setShowCarousel] = useState(false);
+  const [showHero, setShowHero] = useState(skip);
+  const [showCarousel, setShowCarousel] = useState(skip);
 
   useEffect(() => {
-    const skipFlag = sessionStorage.getItem("skipHeroAnimation") === "true";
-
-    if (skip || skipFlag) {
-      sessionStorage.removeItem("skipHeroAnimation");
-      setPageLoaded(true);
-      // Keep the hero mounted/visible so users can scroll up to reveal it
-      // after returning from a project page in production builds.
-      setShowHero(true);
-      setShowCarousel(true);
-      return;
-    }
-
-    setPageLoaded(true);
-
-    const heroTimer = setTimeout(() => {
-      setShowHero(true);
-    }, 0);
-
-    const carouselTimer = setTimeout(() => {
-      setShowCarousel(true);
-    }, 100);
-
+    if (skip) return;
+    const heroTimer = setTimeout(() => setShowHero(true), 0);
+    const carouselTimer = setTimeout(() => setShowCarousel(true), 100);
     return () => {
       clearTimeout(heroTimer);
       clearTimeout(carouselTimer);
     };
-    // Decided once, at mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [skip]);
 
-  return { pageLoaded, showHero, showCarousel };
+  return { showHero, showCarousel };
 }

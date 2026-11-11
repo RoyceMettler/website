@@ -4,7 +4,7 @@
 // card in a plain scrolling list. Tap a card to open it. No 3D carousel (and
 // no WebGL canvas) is mounted here.
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { HeroCard } from "../components/HeroSection";
@@ -70,10 +70,6 @@ const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
   // Arriving by a page transition, the slide is the entrance. On a direct
   // load, fade the intro and the cards in instead.
   const [animateIn] = useState(() => direction === "none" && !reduced && !relayout);
-  useEffect(() => {
-    // Set by ScrollManager for the desktop hero; this layout has no use for it.
-    sessionStorage.removeItem("skipHeroAnimation");
-  }, []);
 
   return (
     <motion.div

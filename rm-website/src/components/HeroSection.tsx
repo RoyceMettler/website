@@ -1,6 +1,6 @@
 // src/components/HeroSection.tsx
 
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import HireMeButton from "./HireMeButton.tsx";
 
@@ -17,6 +17,37 @@ const spawnVariant: Variants = {
     y: 0,
     transition: { delay: i * 0.1, duration: 0.4, ease: "easeOut" },
   }),
+};
+
+/**
+ * The photo. If it is already loaded when the card mounts it is simply there
+ * (and takes part in the card's fade-in); if it is still downloading, it
+ * fades in when it arrives instead of popping into an empty frame.
+ */
+const HeroPhoto: React.FC = () => {
+  const ref = useRef<HTMLImageElement>(null);
+  const [state, setState] = useState<"pending" | "ready" | "late">("pending");
+  useLayoutEffect(() => {
+    if (ref.current?.complete) setState("ready");
+  }, []);
+  const arrived = () => setState((s) => (s === "pending" ? "late" : s));
+
+  return (
+    <img
+      ref={ref}
+      src="/assets/busan.jpg"
+      alt="Royce Mettler"
+      onLoad={arrived}
+      onError={arrived}
+      className={`w-full h-full object-cover ${
+        state === "pending"
+          ? "opacity-0"
+          : state === "late"
+            ? "opacity-100 transition-opacity duration-500"
+            : "opacity-100"
+      }`}
+    />
+  );
 };
 
 type HeroCardProps = {
@@ -105,7 +136,7 @@ export const HeroCard: React.FC<HeroCardProps> = ({ compact = false, spawn = fal
             : "shrink-0 w-full max-w-xs md:max-w-md lg:max-w-lg aspect-[4/5] overflow-hidden rounded-3xl border-5 border-indigo-500 shadow-lg"
         }
       >
-        <img src="/assets/busan.jpg" alt="Royce Mettler" className="w-full h-full object-cover" />
+        <HeroPhoto />
       </motion.div>
     </div>
   </motion.div>

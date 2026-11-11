@@ -3,7 +3,7 @@
 import HeroSection from '../components/HeroSection';
 import Carousel3D from '../components/Carousel3D';
 import ScrollIndicator from '../components/ScrollIndicator';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { homeLayerVariants, usePageTransition } from '../components/PageTransition';
 import { useInitialAnimations } from '../hooks/useInitialAnimations';
@@ -24,12 +24,30 @@ function HomePage() {
 }
 
 function DesktopHome({ relayout }: { relayout: boolean }) {
-  const { showHero, showCarousel } = useInitialAnimations(relayout);
-  const { scrollProgress, scrollOpacity } = useScrollProgress();
   const { direction, reduced } = usePageTransition();
-  // The intro card fades in when the site is first opened on this page.
-  // Arriving by a page transition, the slide is the entrance instead.
-  const [spawnHero] = useState(() => direction === "none" && !reduced && !relayout);
+  // Arriving by a page transition (or swapped in for the phone layout) the
+  // page is simply there: the slide is the entrance, so no load-in plays.
+  const [arrived] = useState(() => relayout || direction !== "none");
+  const { showHero, showCarousel } = useInitialAnimations(arrived);
+  const { scrollProgress, scrollOpacity } = useScrollProgress();
+  // The intro card fades in only when the site is first opened on this page.
+  const [spawnHero] = useState(() => !arrived && !reduced);
+
+  // On arrival the carousel and scroll hint must also not tween to the look
+  // of the scroll position we land on (e.g. back at the carousel), so their
+  // CSS transitions stay off until that first state has been painted.
+  const [settled, setSettled] = useState(!arrived);
+  useEffect(() => {
+    if (settled) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setSettled(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [settled]);
 
   // Use pixel scroll (scrollOpacity) for hero offset/visibility so
   // small upward scrolls reliably reveal the hero in production builds.
@@ -78,13 +96,15 @@ function DesktopHome({ relayout }: { relayout: boolean }) {
           style={{
             transform: `scale(${carouselScale}) translateY(${showCarousel ? '0' : '-110vh'})`,
             opacity: showCarousel ? carouselOpacity : 0,
-            transition: 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease-out',
+            transition: settled
+              ? 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease-out'
+              : 'none',
           }}
         >
           <Carousel3D hintEnabled={heroGone} />
         </div>
 
-        <ScrollIndicator scrollPosition={scrollOpacity} />
+        <ScrollIndicator scrollPosition={scrollOpacity} instant={!settled} />
       </motion.div>
 
       <div className="h-[150vh]" />

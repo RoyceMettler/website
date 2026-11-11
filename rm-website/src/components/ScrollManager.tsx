@@ -41,12 +41,6 @@ const ScrollManager: React.FC<{ path: string; from: string | null }> = ({ path, 
       isHome && !window.matchMedia(PHONE_MEDIA).matches
     );
 
-    if (isHome && from !== null) {
-      // Arriving by navigation: the page transition is the entrance, so skip
-      // the hero/carousel load-in that plays on a direct load.
-      sessionStorage.setItem("skipHeroAnimation", "true");
-    }
-
     if (isHome && from !== null && scrollToBottomSources.includes(from)) {
       // Back from a project page: on phones, land on that project's card in
       // the list; on desktop, on the carousel at the bottom.
