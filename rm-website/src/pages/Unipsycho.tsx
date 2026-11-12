@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { usePageSpawn } from "../components/PageTransition";
 import "../styles/App.css";
 
 const textVariant = {
@@ -18,12 +19,13 @@ const textVariant = {
 };
 
 const Unipsycho: React.FC = () => {
+  const spawn = usePageSpawn();
   return (
     <div className="relative z-10 py-20 min-h-screen text-white overflow-hidden">
       <div className="w-full px-12 md:px-20 lg:px-32">
         <motion.div
-          initial="hidden"
-          animate="show"
+          initial={spawn.initial}
+          animate={spawn.animate}
           className="space-y-6 pt-16 lg:pt-0 text-xl text-indigo-100"
         >
           <motion.h2
@@ -42,9 +44,7 @@ const Unipsycho: React.FC = () => {
             January 2024 - March 2024
           </motion.p>
 
-          <motion.div
-            custom={2}
-            variants={textVariant}
+          <div
             className="relative mb-20 w-full max-w-6xl mx-auto"
           >
             <div 
@@ -73,7 +73,7 @@ const Unipsycho: React.FC = () => {
                 scrolling="no"
               />
             </div>
-          </motion.div>
+          </div>
 
                 <motion.p custom={3} variants={textVariant} className="text-3xl font-semibold leading-relaxed">
                 Note: If the game is very laggy, try switching to Firefox.</motion.p>

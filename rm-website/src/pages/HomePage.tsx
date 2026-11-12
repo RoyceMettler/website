@@ -3,12 +3,51 @@
 import HeroSection from '../components/HeroSection';
 import Carousel3D from '../components/Carousel3D';
 import ScrollIndicator from '../components/ScrollIndicator';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { homeLayerVariants, usePageTransition } from '../components/PageTransition';
 import { useInitialAnimations } from '../hooks/useInitialAnimations';
 import { useScrollProgress } from '../hooks/useScrollProgress';
+import { useIsPhone } from '../hooks/useMediaQuery';
+import PhoneHome from './PhoneHome';
 
+/** Phones get a plain list of project cards; everything else the 3D carousel. */
 function HomePage() {
-  const { showHero, showCarousel } = useInitialAnimations();
+  const isPhone = useIsPhone();
+  // A layout swapped in later (rotating a tablet, resizing across the phone
+  // breakpoint) must not replay the page's arrival slide or the intro.
+  const [firstLayout] = useState(isPhone);
+  const [swapped, setSwapped] = useState(false);
+  if (!swapped && isPhone !== firstLayout) setSwapped(true);
+  const relayout = swapped || isPhone !== firstLayout;
+  return isPhone ? <PhoneHome relayout={relayout} /> : <DesktopHome relayout={relayout} />;
+}
+
+function DesktopHome({ relayout }: { relayout: boolean }) {
+  const { direction, reduced } = usePageTransition();
+  // Arriving by a page transition (or swapped in for the phone layout) the
+  // page is simply there: the slide is the entrance, so no load-in plays.
+  const [arrived] = useState(() => relayout || direction !== "none");
+  const { showHero, showCarousel } = useInitialAnimations(arrived);
   const { scrollProgress, scrollOpacity } = useScrollProgress();
+  // The intro card fades in only when the site is first opened on this page.
+  const [spawnHero] = useState(() => !arrived && !reduced);
+
+  // On arrival the carousel and scroll hint must also not tween to the look
+  // of the scroll position we land on (e.g. back at the carousel), so their
+  // CSS transitions stay off until that first state has been painted.
+  const [settled, setSettled] = useState(!arrived);
+  useEffect(() => {
+    if (settled) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setSettled(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [settled]);
 
   // Use pixel scroll (scrollOpacity) for hero offset/visibility so
   // small upward scrolls reliably reveal the hero in production builds.
@@ -16,24 +55,40 @@ function HomePage() {
   const normalizedProgress = Math.min(scrollProgress, 1);
   const carouselScale = 1 + 0.2 * Math.pow(normalizedProgress, 5);
   const carouselOpacity = 0.6 + 0.4 * Math.pow(normalizedProgress, 5);
+  // HeroSection fades out over the first 300px of scroll. Past that it's
+  // invisible, so hide it for real (it would otherwise still catch hovers and
+  // clicks over the top of the cards), and only then allow the drag hint.
+  // Windows too short to scroll 300px still hide it at the bottom.
+  const heroGone = scrollOpacity >= 300 || scrollProgress >= 0.99;
 
   return (
     <>
 
-      <div className="fixed inset-0 flex items-center justify-center overflow-visible pointer-events-none">
+      {/* The page transition moves this fixed layer itself (not a wrapper)
+          so the fixed hero and carousel keep the viewport as their frame. */}
+      <motion.div
+        className="fixed inset-0 flex items-center justify-center overflow-visible pointer-events-none"
+        custom={{ direction, reduced }}
+        variants={homeLayerVariants}
+        initial={relayout ? false : "initial"}
+        animate="enter"
+        exit="exit"
+      >
         <div
-          className={`transition-all duration-1000 ease-out z-[10] absolute ${
+          // Not transition-all: visibility must flip at once, or the faded
+          // hero keeps catching clicks for another second.
+          className={`transition-[opacity,scale] duration-1000 ease-out z-[10] absolute ${
             // show hero if initial animation triggered OR user hasn't scrolled
             // far from the top (use pixel threshold)
             (showHero || scrollOpacity < 250) ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
           style={{
-            visibility: scrollProgress >= 0.99 ? 'hidden' : 'visible',
-            pointerEvents: scrollProgress >= 0.99 ? 'none' : 'auto',
-            userSelect: scrollProgress >= 0.99 ? 'none' : 'auto',
+            visibility: heroGone ? 'hidden' : 'visible',
+            pointerEvents: heroGone ? 'none' : 'auto',
+            userSelect: heroGone ? 'none' : 'auto',
           }}
         >
-          <HeroSection scrollPosition={heroOffsetY} />
+          <HeroSection scrollPosition={heroOffsetY} spawn={spawnHero} />
         </div>
 
         <div
@@ -41,14 +96,17 @@ function HomePage() {
           style={{
             transform: `scale(${carouselScale}) translateY(${showCarousel ? '0' : '-110vh'})`,
             opacity: showCarousel ? carouselOpacity : 0,
-            transition: 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease-out',
+            transition: settled
+              ? 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.2s ease-out'
+              : 'none',
           }}
         >
-          <Carousel3D />
+          <Carousel3D hintEnabled={heroGone} />
         </div>
-      </div>
 
-      <ScrollIndicator scrollPosition={scrollOpacity} />
+        <ScrollIndicator scrollPosition={scrollOpacity} instant={!settled} />
+      </motion.div>
+
       <div className="h-[150vh]" />
     </>
   );

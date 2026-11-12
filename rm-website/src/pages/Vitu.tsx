@@ -3,6 +3,7 @@
 import React from "react";
 import TiltWrapper from "../components/TiltWrapper";
 import { motion } from "framer-motion";
+import { usePageSpawn } from "../components/PageTransition";
 import "../styles/App.css";
 
 const textVariant = {
@@ -19,12 +20,13 @@ const textVariant = {
 };
 
 const Vitu: React.FC = () => {
+  const spawn = usePageSpawn();
   return (
     <div className="relative z-10 flex flex-col items-center justify-center py-20 min-h-screen text-white overflow-hidden">
       <div className="w-full px-12 md:px-20 lg:px-32">
         <motion.div
-          initial="hidden"
-          animate="show"
+          initial={spawn.initial}
+          animate={spawn.animate}
           className="space-y-6 pt-16 lg:pt-0 text-xl text-indigo-100"
         >
           <motion.h2
@@ -43,9 +45,7 @@ const Vitu: React.FC = () => {
             June 2023 - September 2024
           </motion.p>
 
-          <motion.div
-            custom={2}
-            variants={textVariant}
+          <div
             className="relative float-none sm:float-right sm:ml-10 mb-20 w-full sm:w-2/5 lg:w-2/5 xl:w-3/5 max-w-xl"
           >
             <TiltWrapper
@@ -73,7 +73,7 @@ const Vitu: React.FC = () => {
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>
-          </motion.div>
+          </div>
 
           <motion.p custom={3} variants={textVariant}>
             I first joined{" "}

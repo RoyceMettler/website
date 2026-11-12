@@ -2,7 +2,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { normalizePath } from "./PageTransition";
 
 type NavItem = {
   text: string;
@@ -14,12 +15,13 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { text: "Portfolio",      to: "/" },
   { text: "About",     to: "/about" },
-  { text: "Resume", to: `royce-mettler-resume.pdf`, external: true },
+  { text: "Resume", to: "/royce-mettler-resume.pdf", external: true },
   { text: "Contact",   to: "/contact" },
 ];
 
-const stagger = 0.01;
-const duration = 0.2;
+// The hover effect: each letter rolls up, one after another.
+const stagger = 0.008;
+const duration = 0.15;
 
 const LetterMotion = ({
   letter,
@@ -35,7 +37,7 @@ const LetterMotion = ({
   const delay = isHovering ? index * stagger : (total - index - 1) * stagger;
 
   return (
-    <span className="relative inline-block overflow-hidden align-bottom">
+    <span aria-hidden="true" className="relative inline-block overflow-hidden align-bottom">
       <motion.span
         initial={false}
         animate={{ y: isHovering ? "-100%" : "0%" }}
@@ -59,18 +61,26 @@ const LetterMotion = ({
   );
 };
 
+// On phones the links get padding so each is a comfortable tap target.
+const linkClass = "inline-block phone:px-2.5 phone:py-1.5";
+
 const AnimatedNavItem: React.FC<NavItem> = ({
   text,
   to,
   external = false,
 }) => {
   const [hover, setHover] = React.useState(false);
+  const { pathname } = useLocation();
+  const isCurrent = !external && normalizePath(pathname) === normalizePath(to);
   const letters = text.split("");
+  // The page you are on stays in the hover colour.
+  const lit = hover || isCurrent;
 
   return (
     <li
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      // Mouse only: on a touch screen a tap would leave the hover colour stuck.
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHover(true)}
+      onPointerLeave={() => setHover(false)}
       className="cursor-pointer"
     >
       {external ? (
@@ -78,7 +88,9 @@ const AnimatedNavItem: React.FC<NavItem> = ({
           href={to}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block"
+          className={linkClass}
+          // The animated letters are aria-hidden; name the link once.
+          aria-label={text}
         >
           {letters.map((char, i) => (
             <LetterMotion
@@ -86,19 +98,26 @@ const AnimatedNavItem: React.FC<NavItem> = ({
               letter={char}
               index={i}
               total={letters.length}
-              isHovering={hover}
+              isHovering={lit}
             />
           ))}
         </a>
       ) : (
-        <Link to={to} className="inline-block">
+        <Link
+          to={to}
+          className={linkClass}
+          aria-label={text}
+          aria-current={isCurrent ? "page" : undefined}
+          // Already here: don't push a duplicate history entry.
+          onClick={(e) => isCurrent && e.preventDefault()}
+        >
           {letters.map((char, i) => (
             <LetterMotion
               key={i}
               letter={char}
               index={i}
               total={letters.length}
-              isHovering={hover}
+              isHovering={lit}
             />
           ))}
         </Link>
@@ -107,11 +126,17 @@ const AnimatedNavItem: React.FC<NavItem> = ({
   );
 };
 
+// The same bar everywhere: the name with the four links below it.
+// Desktop: transparent, and only the name and links take the pointer, so the
+// rest of the bar doesn't block the carousel underneath. Phones: a little
+// more compact, on a dark blurred strip, since pages scroll underneath it.
 const Navbar: React.FC = () => (
-  <nav className="fixed top-0 left-0 right-0 bg-transparent z-50">
-    <div className="flex flex-col items-center py-4 px-6">
-      <div className="text-2xl font-bold mb-2 text-white">Royce Mettler</div>
-      <ul className="flex flex-wrap justify-center space-x-6 text-sm font-medium">
+  <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent pointer-events-none phone:pointer-events-auto phone:bg-black/60 phone:backdrop-blur-md phone:border-b phone:border-white/10">
+    <div className="flex flex-col items-center py-4 px-6 phone:pt-2 phone:pb-0.5 phone:px-2">
+      <div className="pointer-events-auto text-2xl font-bold mb-2 text-white phone:text-lg phone:leading-6 phone:mb-0">
+        Royce Mettler
+      </div>
+      <ul className="pointer-events-auto flex flex-wrap justify-center space-x-6 text-sm font-medium phone:space-x-0 phone:text-[15px]">
         {NAV_ITEMS.map((item) => (
           <AnimatedNavItem
             key={item.text}

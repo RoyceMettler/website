@@ -3,6 +3,7 @@
 import React from 'react';
 import TiltWrapper from '../components/TiltWrapper';
 import { motion } from "framer-motion";
+import { usePageSpawn } from "../components/PageTransition";
 import '../styles/App.css';
 
 const textVariant = {
@@ -19,12 +20,13 @@ const textVariant = {
 };
 
 const About: React.FC = () => {
+  const spawn = usePageSpawn();
   return (
-    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between py-20 min-h-screen text-white overflow-x-hidden">
+    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between py-20 min-h-screen text-white overflow-x-clip">
       <div className="w-full px-12 md:px-20 lg:px-32 flex flex-col lg:flex-row items-center justify-between gap-16">
         <motion.div
-          initial="hidden"
-          animate="show"
+          initial={spawn.initial}
+          animate={spawn.animate}
           className="lg:flex-1 w-full mb-12 lg:mb-0 space-y-6 pt-16 lg:pt-0"
         > 
           <motion.h2
@@ -141,7 +143,9 @@ const About: React.FC = () => {
         </motion.div>
 
         <div className="lg:flex-1 flex justify-center items-center">
-          <div className="w-full max-w-2xl">
+          {/* Stacked layout: the montage is last on the page, so leave room
+              below it for its reflection (about 17% of its width). */}
+          <div className="w-full max-w-2xl pb-[20%] lg:pb-0">
             <TiltWrapper 
               maxTilt={4} 
               transitionSpeed={1000} 

@@ -1,9 +1,10 @@
 // App.tsx
 
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useState } from "react";
+import { AnimatePresence, useReducedMotion } from "framer-motion";
 import Navbar from "./components/Navbar";
-import ScrollManager from "./components/ScrollManager";
+import PageTransition, { getDirection, normalizePath } from "./components/PageTransition";
 import HomePage from "./pages/HomePage";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
@@ -24,17 +25,19 @@ import "./styles/App.css";
 
 function App() {
   const location = useLocation();
+  const reduced = !!useReducedMotion();
 
-  useEffect(() => {
-    if (location.pathname === "/") {
-      document.documentElement.classList.add("hide-landing-scrollbar");
-    } else {
-      document.documentElement.classList.remove("hide-landing-scrollbar");
-    }
-    return () => {
-      document.documentElement.classList.remove("hide-landing-scrollbar");
-    };
-  }, [location.pathname]);
+  // Track which page we came from. Keyed on the normalized path, so the
+  // "/multimania" -> "/multimania/" redirect and re-clicking the current
+  // page don't count as navigations.
+  const path = normalizePath(location.pathname);
+  const [nav, setNav] = useState<{ path: string; from: string | null }>({ path, from: null });
+  let from = nav.from;
+  if (nav.path !== path) {
+    from = nav.path;
+    setNav({ path, from });
+  }
+  const direction = getDirection(from, path);
 
    /*useEffect(() => {
     if (location.pathname !== "/" && location.pathname.endsWith("/")) {
@@ -43,10 +46,14 @@ function App() {
   }, [location.pathname]);*/
 
   return (
-    <div className="bg-grandbend min-h-screen">
+    <div className="bg-grandbend min-h-screen phone:min-h-svh">
       <Navbar />
-      <ScrollManager />
-      <Routes>
+      {/* overflow-clip keeps a page that is sliding in from growing the
+          document; it doesn't clip the home page's fixed layers. */}
+      <div className="overflow-clip">
+      <AnimatePresence mode="wait" custom={{ direction, reduced }}>
+      <PageTransition key={path} path={path} from={from} direction={direction} reduced={reduced}>
+      <Routes location={location}>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
@@ -71,6 +78,9 @@ function App() {
         <Route path="/model-un" element={<ModelUN />} />
         <Route path="/music" element={<Blog />} />
       </Routes>
+      </PageTransition>
+      </AnimatePresence>
+      </div>
     </div>
   );
 }

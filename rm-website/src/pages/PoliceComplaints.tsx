@@ -3,6 +3,8 @@
 import React from "react";
 import TiltWrapper from "../components/TiltWrapper";
 import { motion } from "framer-motion";
+import { usePageSpawn } from "../components/PageTransition";
+import { heroImage } from "../components/CardList";
 import "../styles/App.css";
 
 const textVariant = {
@@ -19,12 +21,13 @@ const textVariant = {
 };
 
 const District65: React.FC = () => {
+  const spawn = usePageSpawn();
   return (
     <div className="relative z-10 flex flex-col items-center justify-center py-20 min-h-screen text-white overflow-hidden">
       <div className="w-full px-12 md:px-20 lg:px-32">
         <motion.div
-          initial="hidden"
-          animate="show"
+          initial={spawn.initial}
+          animate={spawn.animate}
           className="space-y-6 pt-16 lg:pt-0 text-xl text-indigo-100"
         >
           <motion.h2
@@ -43,9 +46,7 @@ const District65: React.FC = () => {
             March 2022 - June 2022
           </motion.p>
 
-          <motion.div
-            custom={2}
-            variants={textVariant}
+          <div
             className="relative float-none sm:float-right sm:ml-10 mb-20 w-full sm:w-2/5 lg:w-2/5 xl:w-3/5 max-w-xl"
           >
             <TiltWrapper
@@ -59,13 +60,13 @@ const District65: React.FC = () => {
               reflectionGap="mt-2"
             >
               <img
-                src="/assets/hero/police-complaints.jpg"
+                src={heroImage("/assets/hero/police-complaints.jpg")}
                 width={3108}
                 height={2496}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>
-          </motion.div>
+          </div>
 
           <motion.p custom={3} variants={textVariant}>
            This project set out to answer a tough real-world question: when police officers receive

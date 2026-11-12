@@ -2,6 +2,30 @@
 
 @import "tailwindcss";
 
+/* Phones: narrower than md, or a short touch screen (a phone held sideways).
+   Keep in sync with PHONE_MEDIA in src/hooks/useMediaQuery.ts. */
+@custom-variant phone {
+  @media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
+    @slot;
+  }
+}
+
+/* Phones with a comfortably tall screen (most current ones, even with the
+   browser's toolbars showing), as opposed to small or older phones.
+   Keep in sync with TALL_PHONE_MEDIA in src/hooks/useMediaQuery.ts. */
+@custom-variant tall-phone {
+  @media (max-width: 47.99rem) and (min-height: 38.75rem) {
+    @slot;
+  }
+}
+
+/* Phones: keep focused / scrolled-to elements clear of the fixed top bar. */
+@media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
+  html {
+    scroll-padding-top: 5rem;
+  }
+}
+
 .reflection-mask {
   mask-image:
     linear-gradient(to top, transparent 0%, black 60%),
@@ -26,22 +50,6 @@ html, body {
 .perspective-1000 {
   perspective: 1000px;
   transform-style: preserve-3d;
-}
-
-.scroll-hint {
-  animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-20px);
-  }
-  60% {
-    transform: translateY(-10px);
-  }
 }
 
 @keyframes fadeIn {
@@ -126,6 +134,15 @@ html, body {
   display: none !important;
   width: 0 !important;
   background: transparent !important;
+}
+
+/* While the carousel is being dragged (Carousel3D toggles this on <html>):
+   the grabbing cursor everywhere, and no text selection along the way. */
+html.carousel-dragging,
+html.carousel-dragging * {
+  cursor: grabbing !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 html.hide-landing-scrollbar,

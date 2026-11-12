@@ -1,12 +1,14 @@
 // src/hooks/useScrollProgress.tsx
 
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 
 export function useScrollProgress() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [scrollOpacity, setScrollOpacity] = useState(0);
 
-  useEffect(() => {
+  // A layout effect, so the starting position is applied before the first
+  // paint (the page may arrive already scrolled down to the carousel).
+  useLayoutEffect(() => {
     const onScroll = () => {
       const scrollY = window.scrollY;
       const docHeight = document.documentElement.scrollHeight;
@@ -22,6 +24,9 @@ export function useScrollProgress() {
     };
 
     window.addEventListener('scroll', onScroll);
+    // Read the starting position too: ScrollManager may already have scrolled
+    // (e.g. back to the carousel) before this listener existed.
+    onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
