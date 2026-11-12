@@ -60,6 +60,8 @@ const TechHelp: React.FC = () => {
             >
               <img
                 src="/assets/hero/seniorcenter.jpg"
+                width={1536}
+                height={853}
                 className="rounded-2xl shadow-xl w-full pointer-events-none transition-opacity duration-700"
               />
             </TiltWrapper>
