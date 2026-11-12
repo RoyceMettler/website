@@ -46,13 +46,12 @@ const PhoneCard: React.FC<{ card: CardData; animateIn: boolean; imageWidth: numb
     </span>
   );
 
-  // data-card-link lets ScrollManager bring you back to this card.
   const link = card.external ? (
-    <a href={card.link} target="_blank" rel="noopener noreferrer" className={cardClass} data-card-link={card.link}>
+    <a href={card.link} target="_blank" rel="noopener noreferrer" className={cardClass}>
       {body}
     </a>
   ) : (
-    <Link to={card.link} className={cardClass} data-card-link={card.link}>
+    <Link to={card.link} className={cardClass}>
       {body}
     </Link>
   );
@@ -92,10 +91,7 @@ const PhoneHome: React.FC<{ relayout?: boolean }> = ({ relayout = false }) => {
     >
       <HeroCard compact spawn={animateIn} />
 
-      <section aria-labelledby="portfolio-heading" className="mt-10">
-        <h2 id="portfolio-heading" className="mb-4 text-2xl font-bold text-indigo-300">
-          Portfolio
-        </h2>
+      <section aria-label="Portfolio" className="mt-5">
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           {cardsInViewingOrder.map((card) => (
             <li key={card.link}>

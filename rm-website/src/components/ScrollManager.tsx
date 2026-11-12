@@ -1,7 +1,6 @@
 // src/components/ScrollManager.tsx
 
 import { useLayoutEffect } from "react";
-import { pageTop } from "../utils/dom";
 import { PHONE_MEDIA } from "../hooks/useMediaQuery";
 
 // We place the scroll ourselves once the new page mounts. Left on "auto", the
@@ -10,20 +9,11 @@ if ("scrollRestoration" in window.history) {
   window.history.scrollRestoration = "manual";
 }
 
-export const scrollToBottomSources = [
-  "/ai-engineer-at-vitu",
-  "/ai-research",
-  "/multimania",
-  "/blog",
-  "/squingo",
-  "/unipsycho",
-  "/tech-help",
-  "/district-65",
-  "/crafty",
-  "/police-complaints",
-  "/model-un",
-  "/music",
-];
+// How far Portfolio was scrolled when it was last left (null until then).
+// Coming back to it, from any page and by any route, puts it back there: at
+// the hero if you left from the hero, at the carousel if you left from the
+// carousel, at the same card in the phone list. A reload starts at the top.
+let homeScroll: number | null = null;
 
 /**
  * Rendered by PageTransition, so it mounts together with each page: after the
@@ -41,19 +31,15 @@ const ScrollManager: React.FC<{ path: string; from: string | null }> = ({ path, 
       isHome && !window.matchMedia(PHONE_MEDIA).matches
     );
 
-    if (isHome && from !== null && scrollToBottomSources.includes(from)) {
-      // Back from a project page: on phones, land on that project's card in
-      // the list; on desktop, on the carousel at the bottom.
-      const card = document.querySelector<HTMLElement>(`[data-card-link="${CSS.escape(from)}"]`);
-      if (card) {
-        const top = pageTop(card) - (window.innerHeight - card.offsetHeight) / 2;
-        window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
-      } else {
-        window.scrollTo({ top: document.body.scrollHeight, behavior: "auto" });
-      }
-    } else {
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }
+    const top = isHome && from !== null && homeScroll !== null ? homeScroll : 0;
+    window.scrollTo({ top, behavior: "auto" });
+
+    if (!isHome) return;
+    // Portfolio is being removed (its exit has played, the next page is about
+    // to mount and reset the scroll): remember where it was.
+    return () => {
+      homeScroll = window.scrollY;
+    };
     // Runs once per page mount; the wrapper is keyed by path.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
