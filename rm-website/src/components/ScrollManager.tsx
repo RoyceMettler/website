@@ -30,6 +30,11 @@ const ScrollManager: React.FC<{ path: string; from: string | null }> = ({ path, 
       "hide-landing-scrollbar",
       isHome && !window.matchMedia(PHONE_MEDIA).matches
     );
+    // Every other page scrolls its content up behind the navbar: switch on
+    // the strip that hides it there (.nav-cover in App.css; desktop only,
+    // which the CSS takes care of). Switched here, as each page mounts, the
+    // strip is never over a page that is still sliding away.
+    document.documentElement.classList.toggle("nav-cover-on", !isHome);
 
     const top = isHome && from !== null && homeScroll !== null ? homeScroll : 0;
     window.scrollTo({ top, behavior: "auto" });

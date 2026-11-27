@@ -1,7 +1,7 @@
 // src/pages/HomePage.tsx
 
 import HeroSection from '../components/HeroSection';
-import Carousel3D from '../components/Carousel3D';
+import { CarouselSlot } from '../components/CarouselKeepAlive';
 import ScrollIndicator from '../components/ScrollIndicator';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -101,7 +101,9 @@ function DesktopHome({ relayout }: { relayout: boolean }) {
               : 'none',
           }}
         >
-          <Carousel3D hintEnabled={heroGone} />
+          {/* The carousel itself is kept alive between visits and only moved
+              in and out of here; see CarouselKeepAlive. */}
+          <CarouselSlot hintEnabled={heroGone} />
         </div>
 
         <ScrollIndicator scrollPosition={scrollOpacity} instant={!settled} />

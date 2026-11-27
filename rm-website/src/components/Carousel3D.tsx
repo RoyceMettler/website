@@ -137,14 +137,24 @@ const CarouselScene: React.FC<{
   );
 };
 
-const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true }) => {
+type Carousel3DProps = {
+  hintEnabled?: boolean;
+  /**
+   * False while the carousel is kept alive off screen (Portfolio isn't the
+   * page being shown; see CarouselKeepAlive). Everything that runs per frame
+   * stops, so the ring stays where it was left.
+   */
+  active?: boolean;
+};
+
+const Carousel3D: React.FC<Carousel3DProps> = ({ hintEnabled = true, active = true }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  // Not rendered at all if it had already retired when the page mounted;
-  // when it retires now, it stays mounted so the badge can fade out.
+  // Not rendered at all if it had already retired when the carousel was
+  // built; when it retires now, it stays mounted so the badge can fade out.
   const [hintAtMount] = useState(() => !hintIsDone());
   const [hintRetired, setHintRetired] = useState(!hintAtMount);
-  useCardHover(containerRef);
+  useCardHover(containerRef, active);
 
   const scaleFactor = windowWidth / BASE_VIEWPORT_WIDTH;
 
@@ -249,12 +259,15 @@ const Carousel3D: React.FC<{ hintEnabled?: boolean }> = ({ hintEnabled = true })
         <DragCursor
           targetRef={containerRef}
           tiltDeg={TILT_DEG}
-          enabled={hintEnabled && !hintRetired}
+          enabled={active && hintEnabled && !hintRetired}
         />
       )}
       <Canvas
         dpr={window.devicePixelRatio}
         camera={{ position: [0, 0, 10], fov: 32 }}
+        // Off screen, no frames run at all: the ring doesn't turn and the
+        // cards aren't re-placed.
+        frameloop={active ? "always" : "never"}
       >
         <ScaleOverride
           width={windowWidth}

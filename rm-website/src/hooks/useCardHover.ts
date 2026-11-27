@@ -51,8 +51,13 @@ if (typeof window !== "undefined") {
  * really under the mouse (changing the stale card's `cursor` also makes the
  * browser re-pick the cursor).
  */
-export function useCardHover(containerRef: React.RefObject<HTMLElement | null>) {
+export function useCardHover(
+  containerRef: React.RefObject<HTMLElement | null>,
+  /** False while the carousel is kept alive off screen: nothing to mark. */
+  active = true
+) {
   useEffect(() => {
+    if (!active) return;
     let current: Element | null = null;
     let frame = 0;
 
@@ -76,5 +81,5 @@ export function useCardHover(containerRef: React.RefObject<HTMLElement | null>) 
       cancelAnimationFrame(frame);
       mark(null);
     };
-  }, [containerRef]);
+  }, [containerRef, active]);
 }

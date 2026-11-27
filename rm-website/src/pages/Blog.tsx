@@ -5,7 +5,7 @@ import TiltWrapper from '../components/TiltWrapper';
 
 const Blog: React.FC = () => {
   return (
-    <div className="relative z-10 flex flex-col items-center justify-center py-20 min-h-screen text-white">
+    <div className="relative z-10 flex flex-col items-center justify-center py-[var(--page-top)] min-h-screen text-white">
       <div className="w-full px-12 md:px-20 lg:px-32 flex flex-col items-center justify-center text-center">
         <TiltWrapper
           maxTilt={4}
