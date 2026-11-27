@@ -53,7 +53,7 @@ const Contact: React.FC = () => {
   const isTallPhone = useMediaQuery(TALL_PHONE_MEDIA);
   return (
     <div className="relative min-h-screen phone:min-h-svh">
-      <div className="relative z-10 flex items-center justify-center min-h-screen phone:min-h-svh px-4 phone:pt-[5.25rem] phone:pb-4">
+      <div className="relative z-10 flex items-center justify-center min-h-screen phone:min-h-svh py-[var(--page-top)] px-4 phone:pt-[5.25rem] phone:pb-4">
         <TiltWrapper maxTilt={1} transitionSpeed={1000} hoverScaleEffect>
           <motion.div
             initial={spawn.initial}

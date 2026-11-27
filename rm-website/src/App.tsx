@@ -4,6 +4,7 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { AnimatePresence, useReducedMotion } from "framer-motion";
 import Navbar from "./components/Navbar";
+import { CarouselKeeper } from "./components/CarouselKeepAlive";
 import PageTransition, { getDirection, normalizePath } from "./components/PageTransition";
 import HomePage from "./pages/HomePage";
 import About from "./pages/About";
@@ -46,8 +47,16 @@ function App() {
   }, [location.pathname]);*/
 
   return (
-    <div className="bg-grandbend min-h-screen phone:min-h-svh">
+    // w-screen: every page is laid out against the full window width, not
+    // the width left over beside the scrollbar. A page's scrollbar then sits
+    // over its right-hand margin instead of squeezing the page, so nothing
+    // jumps sideways between Portfolio (no scrollbar) and the other pages.
+    <div className="bg-grandbend w-screen min-h-screen phone:min-h-svh">
       <Navbar />
+      {/* Hides page content where it scrolls up behind the navbar. */}
+      <div className="nav-cover" aria-hidden="true" />
+      {/* Holds the 3D carousel for the whole visit; Portfolio borrows it. */}
+      <CarouselKeeper />
       {/* overflow-clip keeps a page that is sliding in from growing the
           document; it doesn't clip the home page's fixed layers. */}
       <div className="overflow-clip">

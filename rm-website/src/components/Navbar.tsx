@@ -130,8 +130,11 @@ const AnimatedNavItem: React.FC<NavItem> = ({
 // Desktop: transparent, and only the name and links take the pointer, so the
 // rest of the bar doesn't block the carousel underneath. Phones: a little
 // more compact, on a dark blurred strip, since pages scroll underneath it.
+// w-screen rather than right-0: as wide as the window whether or not the page
+// has a scrollbar, so the bar doesn't shift sideways when one appears (going
+// from Portfolio, which hides its scrollbar, to any other page).
 const Navbar: React.FC = () => (
-  <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent pointer-events-none phone:pointer-events-auto phone:bg-black/60 phone:backdrop-blur-md phone:border-b phone:border-white/10">
+  <nav className="fixed top-0 left-0 w-screen z-50 bg-transparent pointer-events-none phone:pointer-events-auto phone:bg-black/60 phone:backdrop-blur-md phone:border-b phone:border-white/10">
     <div className="flex flex-col items-center py-4 px-6 phone:pt-2 phone:pb-0.5 phone:px-2">
       <div className="pointer-events-auto text-2xl font-bold mb-2 text-white phone:text-lg phone:leading-6 phone:mb-0">
         Royce Mettler

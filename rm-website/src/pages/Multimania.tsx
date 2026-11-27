@@ -21,7 +21,7 @@ const textVariant = {
 const Multimania: React.FC = () => {
   const spawn = usePageSpawn();
   return (
-    <div className="relative z-10 py-20 min-h-screen text-white overflow-hidden">
+    <div className="relative z-10 pt-[var(--page-top)] pb-20 min-h-screen text-white overflow-hidden">
       <div className="w-full px-12 md:px-20 lg:px-32">
         <motion.div
           initial={spawn.initial}
@@ -31,7 +31,7 @@ const Multimania: React.FC = () => {
           <motion.h2
             custom={0}
             variants={textVariant}
-            className="text-4xl font-bold text-indigo-300 mb-6"
+            className="text-4xl font-bold text-indigo-300 mb-0 phone:mb-6"
           >
             Multimania
           </motion.h2>
@@ -39,7 +39,7 @@ const Multimania: React.FC = () => {
           <motion.p
             custom={1}
             variants={textVariant}
-            className="text-lg text-indigo-200 mb-6 italic"
+            className="text-lg text-indigo-200 mb-2 phone:mb-6 italic"
           >
             November 2023
           </motion.p>

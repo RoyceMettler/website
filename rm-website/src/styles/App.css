@@ -19,11 +19,28 @@
   }
 }
 
-/* Phones: keep focused / scrolled-to elements clear of the fixed top bar. */
+:root {
+  /* Where a page's content starts: clear of the fixed navbar, with some air
+     above the page's title. Pages use it as pt-[var(--page-top)]. */
+  --page-top: 7.5rem;
+  /* The strip at the top of the window in which page content is hidden (see
+     .nav-cover below): completely hidden down to the first length, completely
+     visible again from the second. Keep both smaller than --page-top, or a
+     page's own title would be hidden while the page is at the top. */
+  --nav-cover-solid: 5.25rem;
+  --nav-cover-end: 6.75rem;
+}
+
+/* Phones: the bar is shorter and solid; pages start where they always did. */
 @media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
-  html {
-    scroll-padding-top: 5rem;
+  :root {
+    --page-top: 5rem;
   }
+}
+
+/* Keep focused / scrolled-to elements clear of the fixed top bar. */
+html {
+  scroll-padding-top: var(--page-top);
 }
 
 .reflection-mask {
@@ -109,20 +126,71 @@ html, body {
   position: relative;
 }
 
-.bg-grandbend::before {
+/* The site's background picture, dimmed. One rule for the background itself
+   and for .nav-cover, which only works if it is drawn exactly the same way:
+   change the background here and both follow. */
+.bg-grandbend::before,
+.nav-cover::before {
   content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   background-image: url('/assets/grandbend.jpg');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   background-repeat: no-repeat;
   filter: brightness(0.1) contrast(0.8) saturate(1.5);
+}
+
+.bg-grandbend::before {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* The window's width, scrollbar or not (see the note on the root element in
+     App.tsx), so the picture doesn't rescale when a scrollbar appears. */
+  width: 100vw;
+  height: 100%;
   z-index: -1;
+}
+
+/* Desktop, every page except Portfolio: page content that scrolls up behind
+   the navbar (which is see-through there) is hidden, instead of running into
+   the name and the links.
+
+   It is hidden by a copy of the background drawn over the page. The copy is
+   laid out over the whole window, exactly like the real background, so the
+   two line up and the copy can't be told apart from it; then only its top
+   strip is kept, fading out along its lower edge. It sits over the page and
+   under the navbar (z-50).
+
+   ScrollManager sets nav-cover-on on <html> while such a page is mounted. */
+.nav-cover {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100%;
+  z-index: 40;
+  /* Only the strip exists as far as the mouse is concerned: what is hidden
+     under it can't be clicked, and the rest of the page is untouched. */
+  clip-path: inset(0 0 calc(100% - var(--nav-cover-end)) 0);
+}
+
+html.nav-cover-on .nav-cover {
+  display: block;
+}
+
+.nav-cover::before {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, black var(--nav-cover-solid), transparent var(--nav-cover-end));
+  mask-image: linear-gradient(to bottom, black var(--nav-cover-solid), transparent var(--nav-cover-end));
+}
+
+/* Phones: the navbar has its own dark, blurred strip; nothing more needed. */
+@media (max-width: 47.99rem), (pointer: coarse) and (max-height: 31.24rem) {
+  html.nav-cover-on .nav-cover {
+    display: none;
+  }
 }
 
 .no-scrollbar {

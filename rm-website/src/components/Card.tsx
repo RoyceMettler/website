@@ -66,12 +66,33 @@ const Card: React.FC<CardProps> = ({
     [isDragging, external, navigate, link]
   );
 
+  // The card's HTML is mounted a moment before drei has placed it in 3D. Until
+  // then it would be drawn flat, at full size, in the carousel's corner (a
+  // flash of giant label text), so it starts hidden and is shown by the first
+  // frame that finds it placed. Tracked per element, not per card: drei can
+  // mount the HTML a second time (a new element, hidden again) after the
+  // first one was already shown.
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const shownLink = useRef<HTMLAnchorElement | null>(null);
+  const framesWaited = useRef(0);
+
   useFrame(() => {
     if (!meshRef.current || !imgRef.current) return;
     const worldAngle = meshRef.current.rotation.y;
     const norm = (worldAngle + Math.PI * 2) % (Math.PI * 2);
     const shiftPercent = Math.sin(norm) * 20;
     imgRef.current.style.transform = `translateX(${shiftPercent}%) scale(1.3)`;
+
+    const link = linkRef.current;
+    if (!link || link === shownLink.current) return;
+    // drei puts the 3D matrix on the element two levels above the content.
+    // Never stay hidden if that ever changes: give up waiting after a while.
+    const positioned = !!link.parentElement?.parentElement?.style.transform;
+    if (positioned || ++framesWaited.current > 30) {
+      shownLink.current = link;
+      framesWaited.current = 0;
+      link.style.visibility = "";
+    }
   });
 
   const width = BASE_WIDTH * scaleFactor;
@@ -116,6 +137,7 @@ const Card: React.FC<CardProps> = ({
 
       <Html transform center>
         <a
+          ref={linkRef}
           href={link}
           target={external ? "_blank" : undefined}
           rel={external ? "noopener noreferrer" : undefined}
@@ -127,7 +149,9 @@ const Card: React.FC<CardProps> = ({
           // Hover look comes from data-hover (set by useCardHover), not from
           // :hover, which goes stale when the ring turns under a still mouse.
           className="block w-full h-full cursor-default data-[hover=true]:cursor-pointer select-none transition-transform duration-600 ease-in-out data-[hover=true]:scale-105"
-          style={{ width, height }}
+          // Hidden until placed in 3D (see `placed` above). React only writes
+          // style values that change between renders, so it never re-hides it.
+          style={{ width, height, visibility: "hidden" }}
         >
           {content}
         </a>
